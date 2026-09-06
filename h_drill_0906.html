@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>苏格拉底互动特训课</title>
+<!--
+  =====================================================================
+  初中数学 · 苏格拉底互动特训课 模板（math-socratic-trainer 技能资产）
+  ---------------------------------------------------------------------
+  怎么用：复制本文件，只改下面的 COURSE 对象即可，不要从零写 HTML。
+
+  已修复的已知坑（详见技能 SKILL.md Pitfalls）：
+    ✅ 原生 CSS，不用 Tailwind @apply
+    ✅ 选项绝不预显示"对/接近/反了"——评语只在点击后揭示
+    ✅ 不用 window['check'+id] 拼函数名，改用数据驱动 + 闭包绑定
+    ✅ 不用 split('-') 解析 dash（旧坑：c1-1 → NaN → 下一步死锁）
+       本模板用"步骤索引"驱动，根本不存在 dash 解析
+    ✅ checkQuiz：先启用"下一步"，再 try/catch 显示反馈——
+       反馈 handler 报错也绝不会卡住下一步
+    ✅ scrollIntoView 带 if 防御（部分 webview 缺该方法）
+  几何/题干图：用 PDF 真实截图 base64 嵌入 <img>，严禁手绘 SVG。
+  =====================================================================
+-->
+<style>
+  :root{
+    --bg:#f6f7fb; --card:#ffffff; --ink:#1f2430; --sub:#5b6472;
+    --line:#e6e9f0; --accent:#4f6ef7; --accent-soft:#eef1fe;
+    --ok:#1f9d6b; --ok-soft:#e7f7ef; --bad:#e0533d; --bad-soft:#fdecea;
+    --warn:#b7791f; --radius:16px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.7;padding:18px}
+  .wrap{max-width:760px;margin:0 auto}
+  .head{background:linear-gradient(135deg,#4f6ef7,#7b5cf0);color:#fff;
+    border-radius:var(--radius);padding:22px 24px;margin-bottom:16px;
+    box-shadow:0 8px 24px rgba(79,110,247,.25)}
+  .head h1{font-size:21px;letter-spacing:.5px}
+  .head p{opacity:.92;margin-top:6px;font-size:14px}
+  .progress{height:8px;background:rgba(255,255,255,.35);border-radius:99px;
+    margin-top:14px;overflow:hidden}
+  .progress>i{display:block;height:100%;width:0;background:#fff;
+    border-radius:99px;transition:width .3s}
+  .step{display:none;background:var(--card);border:1px solid var(--line);
+    border-radius:var(--radius);padding:22px 22px 18px;margin-bottom:14px;
+    box-shadow:0 4px 16px rgba(31,36,48,.05)}
+  .step.active{display:block;animation:fade .35s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .tag{display:inline-block;font-size:12px;font-weight:700;color:var(--accent);
+    background:var(--accent-soft);padding:3px 10px;border-radius:99px;margin-bottom:10px}
+  .step h2{font-size:18px;margin-bottom:12px}
+  .step p,.step li{font-size:15.5px;color:var(--ink)}
+  .step p{margin:8px 0}
+  .step ul,.step ol{margin:8px 0 8px 22px}
+  .step li{margin:5px 0}
+  .note{background:var(--accent-soft);border-left:4px solid var(--accent);
+    padding:10px 14px;border-radius:10px;margin:12px 0;font-size:14.5px;color:#2b3550}
+  .imgbox{margin:14px 0;text-align:center}
+  .imgbox img{max-width:100%;border:1px solid var(--line);border-radius:12px;background:#fff}
+  .opts{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+  .opt{display:flex;align-items:flex-start;gap:10px;cursor:pointer;
+    border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;
+    font-size:15px;transition:.15s;background:#fff}
+  .opt:hover{border-color:var(--accent);background:var(--accent-soft)}
+  .opt .mk{flex:0 0 22px;height:22px;border-radius:50%;border:1.5px solid #c4cad6;
+    display:flex;align-items:center;justify-content:center;font-size:13px;color:#8a93a3;font-weight:700}
+  .opt.chosen{border-color:var(--accent)}
+  .opt.correct{border-color:var(--ok);background:var(--ok-soft)}
+  .opt.wrong{border-color:var(--bad);background:var(--bad-soft)}
+  .opt.locked{cursor:default;pointer-events:none}
+  .fb{margin-top:14px;padding:12px 14px;border-radius:12px;font-size:14.5px;
+    display:none}
+  .fb.show{display:block;animation:fade .3s}
+  .fb.ok{background:var(--ok-soft);border:1px solid #bfe9d3;color:#146b48}
+  .fb.bad{background:var(--bad-soft);border:1px solid #f6c9c0;color:#8f2f20}
+  .fb b{color:inherit}
+  .nav{display:flex;justify-content:space-between;gap:10px;margin-top:18px}
+  .btn{border:none;border-radius:12px;padding:12px 20px;font-size:15px;
+    font-weight:700;cursor:pointer;transition:.15s}
+  .btn-next{background:var(--accent);color:#fff;flex:1}
+  .btn-next:hover{background:#3f5ce8}
+  .btn-next:disabled{background:#c8cee0;color:#fff;cursor:not-allowed}
+  .btn-back{background:#fff;color:var(--sub);border:1.5px solid var(--line)}
+  .btn-back:hover{border-color:var(--accent);color:var(--accent)}
+  .done{text-align:center;padding:8px 0 4px;color:var(--ok);font-weight:700}
+  .foot{text-align:center;color:var(--sub);font-size:12.5px;margin:8px 0 28px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <h1 id="courseTitle">互动特训课</h1>
+    <p id="courseSub">跟着问题一步步想，别急着看答案</p>
+    <div class="progress"><i id="bar"></i></div>
+  </div>
+  <div id="stage"></div>
+  <div class="foot">讲人话 · 一步步来 · 你一定能看懂</div>
+</div>
+
+<script>
+/* =====================================================================
+   只改这里：COURSE 对象
+   - steps 是一道题拆成的若干引导环节
+   - kind: "read" 讲解/读题 | "quiz" 选择题 | "summary" 母套路小结卡
+   - quiz 的 options: {t:选项文字, ok:是否正确答案, why:点击后才显示的讲解}
+   - why 里可以放 <b> 等简单 HTML
+   ===================================================================== */
+var COURSE = {
+  "title": "斜边上的高 · 5分钟专项补洞",
+  "subtitle": "专治第6题漏×2：高 = 两直角边乘积 ÷ 斜边",
+  "steps": [
+    {
+      "kind": "read",
+      "tag": "开场 · 今天只补一个洞",
+      "title": "你刚才那 6 道同类题，结果出来了",
+      "html": "<p>1、3、4、5 题<strong>全对</strong>，第 2 题方向也对。只有<strong>第 6 题错了</strong>。</p>\n    <p>第 6 题：直角边 6、8，斜边 10，面积 24，你写\"斜边上的高 = 2.4\"。</p>\n    <div class=\"note\">正确答案应该是 <b>4.8</b>。错在哪？不是粗心，是<strong>三角形面积公式里的 ×2 忘翻出来</strong>。<br>\n    今天 5 分钟，把这个洞补上，以后看到\"斜边上的高\"就秒杀。</div>"
+    },
+    {
+      "kind": "read",
+      "tag": "母套路 · 公式本来的样子",
+      "title": "为什么高 = 两直角边乘积 ÷ 斜边？",
+      "html": "<p>三角形面积公式：<b>S = ½ × 底 × 高</b>。同一个三角形，底可以换着选。</p>\n    <ul>\n      <li>选<strong>直角边 a</strong> 当底：S = ½ × a × b（这是最熟的）</li>\n      <li>选<strong>斜边 c</strong> 当底：S = ½ × c × h（h 就是斜边上的高）</li>\n    </ul>\n    <p>两个 S 是<strong>同一个面积</strong>，所以：</p>\n    <p style=\"text-align:center;font-size:17px\"><b>½ × a × b = ½ × c × h</b></p>\n    <p>两边同时 ×2：<b>a × b = c × h</b>，所以 <b>h = (a × b) ÷ c</b></p>\n    <div class=\"note\">关键：公式里的 ½ 翻到另一边就变成 <b>×2</b>。你刚才只除了 c，没把 ½ 翻成 ×2，所以得到的一半。</div>"
+    },
+    {
+      "kind": "quiz",
+      "tag": "诊断 · 你错在哪一步",
+      "title": "你写的 24 ÷ 10 = 2.4，问题出在哪？",
+      "prompt": "24 是面积，10 是斜边（底）。三角形面积公式里藏着 ½，换成高的时候要翻出来。你漏了哪一步？",
+      "options": [
+        {
+          "t": "A. 面积 24 算错了",
+          "ok": false,
+          "why": "没算错。6×8÷2 = 24，这一步是对的。"
+        },
+        {
+          "t": "B. 该用 2×面积÷底，你只除了没乘 2",
+          "ok": true,
+          "why": "对！<b>斜边上的高 = 2 × S ÷ c = 48 ÷ 10 = 4.8</b>。你写成 S ÷ c，漏了把 ½ 翻成 ×2，结果正好少一半。"
+        },
+        {
+          "t": "C. 斜边 10 选错了",
+          "ok": false,
+          "why": "斜边 10 没错（6、8、10 是勾股数）。"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "母套路卡 · 两条路都能到",
+      "title": "记这一个公式就够了",
+      "html": "<p style=\"text-align:center;font-size:18px\"><b>斜边上的高 h = 两直角边乘积 ÷ 斜边</b></p>\n    <p style=\"text-align:center;color:var(--sub)\">h = a × b ÷ c</p>\n    <ul>\n      <li><b>慢路</b>：先算 S = ½ab，再 h = 2S ÷ c（两步，容易漏 ×2）</li>\n      <li><b>快路（推荐）</b>：直接 <b>h = a × b ÷ c</b>（一步到位，不碰面积，绝不漏 ×2）</li>\n    </ul>\n    <div class=\"note\">考试用<strong>快路</strong>：看见\"直角三角形 + 斜边上的高\"，脑子里直接蹦 a×b÷c，比先算面积稳。</div>"
+    },
+    {
+      "kind": "quiz",
+      "tag": "练习 1 · 6、8、10",
+      "title": "直角边 6 和 8，斜边 10。斜边上的高 h = ?",
+      "prompt": "用快路 h = a×b÷c。别算面积，直接两直角边相乘再除以斜边。",
+      "options": [
+        {
+          "t": "A. 4.8",
+          "ok": true,
+          "why": "对！6 × 8 ÷ 10 = 48 ÷ 10 = <b>4.8</b>。这正好是你第 6 题该写的答案。"
+        },
+        {
+          "t": "B. 2.4",
+          "ok": false,
+          "why": "这就是上次错的写法（24÷10），漏了 ×2。"
+        },
+        {
+          "t": "C. 48",
+          "ok": false,
+          "why": "48 是 a×b 的乘积本身，不是高；还要除以斜边 10。"
+        }
+      ]
+    },
+    {
+      "kind": "quiz",
+      "tag": "练习 2 · 5、12、13",
+      "title": "直角边 5 和 12，斜边 13。斜边上的高 h = ?",
+      "prompt": "继续用快路 h = a×b÷c。5、12、13 是常见勾股数。",
+      "options": [
+        {
+          "t": "A. 60/13",
+          "ok": true,
+          "why": "对！5 × 12 ÷ 13 = 60 ÷ 13 = <b>60/13</b>（≈4.62）。分数能留分数就留分数，别急着除。"
+        },
+        {
+          "t": "B. 30/13",
+          "ok": false,
+          "why": "漏了 ×2：30 是面积（½×5×12），不是高。"
+        },
+        {
+          "t": "C. 13/60",
+          "ok": false,
+          "why": "分子分母颠倒了，高一定比斜边小，13/60 太小也不对。"
+        }
+      ]
+    },
+    {
+      "kind": "quiz",
+      "tag": "练习 3 · 9、12、15",
+      "title": "直角边 9 和 12，斜边 15。斜边上的高 h = ?",
+      "prompt": "最后一题，自己走完快路 a×b÷c。",
+      "options": [
+        {
+          "t": "A. 7.2",
+          "ok": true,
+          "why": "对！9 × 12 ÷ 15 = 108 ÷ 15 = <b>7.2</b>。完整走通了。"
+        },
+        {
+          "t": "B. 54/15",
+          "ok": false,
+          "why": "54 是面积（½×9×12），漏了 ×2。"
+        },
+        {
+          "t": "C. 15/108",
+          "ok": false,
+          "why": "颠倒了，高一定小于斜边 15。"
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "tag": "收工 · 口诀",
+      "title": "把这个背下来，第 6 题类型的题再也不丢分",
+      "html": "<p style=\"text-align:center;font-size:18px\"><b>斜边上的高 = 两直角边乘积 ÷ 斜边</b></p>\n    <p style=\"text-align:center;color:var(--sub)\">h = a × b ÷ c</p>\n    <div class=\"note\"><b>口诀：</b>高 = 胖 × 瘦 ÷ 斜。<br>\n    看见\"直角三角形 + 斜边上的高\"，脑子里直接蹦 <b>a×b÷c</b>，不碰面积，绝不漏 ×2。</div>\n    <ul>\n      <li>✅ 第 6 题原题（6、8、10）→ <b>4.8</b></li>\n      <li>✅ 同类变式（5、12、13）→ <b>60/13</b></li>\n      <li>✅ 同类变式（9、12、15）→ <b>7.2</b></li>\n    </ul>\n    <p><b>今晚任务：</b>把这 3 道题在草稿纸上各写一遍\"h = a×b÷c\"的过程，拍给我，我帮你最后确认一遍。</p>"
+    }
+  ]
+};
+window.COURSE = COURSE;
+
+
+/* ===================== 渲染引擎（一般不用改） ===================== */
+const stage = document.getElementById('stage');
+document.getElementById('courseTitle').textContent = COURSE.title;
+document.getElementById('courseSub').textContent = COURSE.subtitle;
+const bar = document.getElementById('bar');
+let cur = 0;
+
+function scrollTop(){
+  const el = document.querySelector('.wrap');
+  if (el && el.scrollIntoView) { try{ el.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){} }
+}
+
+function render(i){
+  cur = i;
+  const total = COURSE.steps.length;
+  bar.style.width = Math.round((i)/(total-1)*100) + '%';
+  stage.innerHTML = '';
+  const s = COURSE.steps[i];
+  const card = document.createElement('div');
+  card.className = 'step active';
+  let inner = '';
+  if (s.tag) inner += `<span class="tag">${s.tag}</span>`;
+  inner += `<h2>${s.title}</h2>`;
+  if (s.kind === 'quiz'){
+    inner += `<p>${s.prompt}</p><div class="opts" id="opts"></div><div class="fb" id="fb"></div>`;
+  } else {
+    inner += s.html || '';
+  }
+  // 导航按钮
+  const isLast = (i === total-1);
+  inner += `<div class="nav">`;
+  inner += i>0 ? `<button class="btn btn-back" id="back">← 上一步</button>` : `<span></span>`;
+  if (!isLast){
+    inner += `<button class="btn btn-next" id="next">下一步 →</button>`;
+  } else if (s.kind !== 'summary'){
+    inner += `<button class="btn btn-next" id="next">完成 ✓</button>`;
+  } else {
+    inner += `<span></span>`;
+  }
+  inner += `</div>`;
+  card.innerHTML = inner;
+  stage.appendChild(card);
+
+  if (s.kind === 'quiz') buildQuiz(s, card);
+  // 绑定导航
+  const nextBtn = card.querySelector('#next');
+  if (nextBtn){
+    if (s.kind === 'quiz'){ nextBtn.disabled = true; } // 答题后才解锁
+    nextBtn.addEventListener('click', ()=>{ if(!nextBtn.disabled) render(i+1); });
+  }
+  const backBtn = card.querySelector('#back');
+  if (backBtn) backBtn.addEventListener('click', ()=> render(i-1));
+  scrollTop();
+}
+
+function buildQuiz(s, card){
+  const optsBox = card.querySelector('#opts');
+  const fb = card.querySelector('#fb');
+  const nextBtn = card.querySelector('#next');
+  s.options.forEach((o, idx)=>{
+    const div = document.createElement('div');
+    div.className = 'opt';
+    div.innerHTML = `<span class="mk">${String.fromCharCode(65+idx)}</span><span>${o.t}</span>`;
+    div.addEventListener('click', ()=>{
+      // 锁定所有选项（避免重复点）
+      optsBox.querySelectorAll('.opt').forEach(el=>{ el.classList.add('locked'); });
+      // 先启用"下一步"（关键：绝不被反馈 handler 卡住）
+      if (nextBtn) nextBtn.disabled = false;
+      // 标出对错
+      div.classList.add(o.ok ? 'correct' : 'wrong', 'chosen');
+      if (!o.ok){
+        // 顺便高亮正确答案，让学生看到正解
+        optsBox.querySelectorAll('.opt').forEach((el,k)=>{ if(s.options[k].ok) el.classList.add('correct'); });
+      }
+      // 揭示评语（try/catch 兜底）
+      try{
+        fb.className = 'fb show ' + (o.ok ? 'ok' : 'bad');
+        fb.innerHTML = (o.ok ? '✅ <b>答对了：</b>' : '⚠️ <b>再看一眼：</b>') + o.why;
+      }catch(e){ /* 反馈出错也不影响下一步 */ }
+      scrollTop();
+    });
+    optsBox.appendChild(div);
+  });
+}
+
+render(0);
+</script>
+</body>
+</html>
