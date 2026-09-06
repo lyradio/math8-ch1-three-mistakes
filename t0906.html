@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>苏格拉底互动特训课</title>
+<!--
+  =====================================================================
+  初中数学 · 苏格拉底互动特训课 模板（math-socratic-trainer 技能资产）
+  ---------------------------------------------------------------------
+  怎么用：复制本文件，只改下面的 COURSE 对象即可，不要从零写 HTML。
+
+  已修复的已知坑（详见技能 SKILL.md Pitfalls）：
+    ✅ 原生 CSS，不用 Tailwind @apply
+    ✅ 选项绝不预显示"对/接近/反了"——评语只在点击后揭示
+    ✅ 不用 window['check'+id] 拼函数名，改用数据驱动 + 闭包绑定
+    ✅ 不用 split('-') 解析 dash（旧坑：c1-1 → NaN → 下一步死锁）
+       本模板用"步骤索引"驱动，根本不存在 dash 解析
+    ✅ checkQuiz：先启用"下一步"，再 try/catch 显示反馈——
+       反馈 handler 报错也绝不会卡住下一步
+    ✅ scrollIntoView 带 if 防御（部分 webview 缺该方法）
+  几何/题干图：用 PDF 真实截图 base64 嵌入 <img>，严禁手绘 SVG。
+  =====================================================================
+-->
+<style>
+  :root{
+    --bg:#f6f7fb; --card:#ffffff; --ink:#1f2430; --sub:#5b6472;
+    --line:#e6e9f0; --accent:#4f6ef7; --accent-soft:#eef1fe;
+    --ok:#1f9d6b; --ok-soft:#e7f7ef; --bad:#e0533d; --bad-soft:#fdecea;
+    --warn:#b7791f; --radius:16px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.7;padding:18px}
+  .wrap{max-width:760px;margin:0 auto}
+  .head{background:linear-gradient(135deg,#4f6ef7,#7b5cf0);color:#fff;
+    border-radius:var(--radius);padding:22px 24px;margin-bottom:16px;
+    box-shadow:0 8px 24px rgba(79,110,247,.25)}
+  .head h1{font-size:21px;letter-spacing:.5px}
+  .head p{opacity:.92;margin-top:6px;font-size:14px}
+  .progress{height:8px;background:rgba(255,255,255,.35);border-radius:99px;
+    margin-top:14px;overflow:hidden}
+  .progress>i{display:block;height:100%;width:0;background:#fff;
+    border-radius:99px;transition:width .3s}
+  .step{display:none;background:var(--card);border:1px solid var(--line);
+    border-radius:var(--radius);padding:22px 22px 18px;margin-bottom:14px;
+    box-shadow:0 4px 16px rgba(31,36,48,.05)}
+  .step.active{display:block;animation:fade .35s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .tag{display:inline-block;font-size:12px;font-weight:700;color:var(--accent);
+    background:var(--accent-soft);padding:3px 10px;border-radius:99px;margin-bottom:10px}
+  .step h2{font-size:18px;margin-bottom:12px}
+  .step p,.step li{font-size:15.5px;color:var(--ink)}
+  .step p{margin:8px 0}
+  .step ul,.step ol{margin:8px 0 8px 22px}
+  .step li{margin:5px 0}
+  .note{background:var(--accent-soft);border-left:4px solid var(--accent);
+    padding:10px 14px;border-radius:10px;margin:12px 0;font-size:14.5px;color:#2b3550}
+  .imgbox{margin:14px 0;text-align:center}
+  .imgbox img{max-width:100%;border:1px solid var(--line);border-radius:12px;background:#fff}
+  .opts{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+  .opt{display:flex;align-items:flex-start;gap:10px;cursor:pointer;
+    border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;
+    font-size:15px;transition:.15s;background:#fff}
+  .opt:hover{border-color:var(--accent);background:var(--accent-soft)}
+  .opt .mk{flex:0 0 22px;height:22px;border-radius:50%;border:1.5px solid #c4cad6;
+    display:flex;align-items:center;justify-content:center;font-size:13px;color:#8a93a3;font-weight:700}
+  .opt.chosen{border-color:var(--accent)}
+  .opt.correct{border-color:var(--ok);background:var(--ok-soft)}
+  .opt.wrong{border-color:var(--bad);background:var(--bad-soft)}
+  .opt.locked{cursor:default;pointer-events:none}
+  .fb{margin-top:14px;padding:12px 14px;border-radius:12px;font-size:14.5px;
+    display:none}
+  .fb.show{display:block;animation:fade .3s}
+  .fb.ok{background:var(--ok-soft);border:1px solid #bfe9d3;color:#146b48}
+  .fb.bad{background:var(--bad-soft);border:1px solid #f6c9c0;color:#8f2f20}
+  .fb b{color:inherit}
+  .nav{display:flex;justify-content:space-between;gap:10px;margin-top:18px}
+  .btn{border:none;border-radius:12px;padding:12px 20px;font-size:15px;
+    font-weight:700;cursor:pointer;transition:.15s}
+  .btn-next{background:var(--accent);color:#fff;flex:1}
+  .btn-next:hover{background:#3f5ce8}
+  .btn-next:disabled{background:#c8cee0;color:#fff;cursor:not-allowed}
+  .btn-back{background:#fff;color:var(--sub);border:1.5px solid var(--line)}
+  .btn-back:hover{border-color:var(--accent);color:var(--accent)}
+  .done{text-align:center;padding:8px 0 4px;color:var(--ok);font-weight:700}
+  .foot{text-align:center;color:var(--sub);font-size:12.5px;margin:8px 0 28px}
+</style>
+<style>
+.imgbox img{cursor:zoom-in;transition:transform .25s ease}
+.imgbox img.zoom{transform:scale(1.6);cursor:zoom-out;z-index:10;position:relative}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <h1 id="courseTitle">互动特训课</h1>
+    <p id="courseSub">跟着问题一步步想，别急着看答案</p>
+    <div class="progress"><i id="bar"></i></div>
+  </div>
+  <div id="stage"></div>
+  <div class="foot">讲人话 · 一步步来 · 你一定能看懂</div>
+</div>
+
+<script>
+/* =====================================================================
+   只改这里：COURSE 对象
+   - steps 是一道题拆成的若干引导环节
+   - kind: "read" 讲解/读题 | "quiz" 选择题 | "summary" 母套路小结卡
+   - quiz 的 options: {t:选项文字, ok:是否正确答案, why:点击后才显示的讲解}
+   - why 里可以放 <b> 等简单 HTML
+   ===================================================================== */
+var COURSE = {
+  "title": "勾股定理 · 三个开关特训（0906）",
+  "subtitle": "读图 · 一图两算 · 答完整 —— 三道错题 + 四道证明核对",
+  "steps": [
+    {
+      "kind": "read",
+      "tag": "开课 · 今天的体检报告",
+      "title": "先说一个好消息",
+      "html": "<p>先把结论放这儿：<b>你的勾股定理本身没问题——第 2 页专题 1 的四道证明题，你全部写对了。</b></p>\n    <div class=\"imgbox\"><img src=\"./proof1.jpg\"><div style=\"font-size:13px;color:var(--sub);margin-top:6px\">你的第 1 题：毕达哥拉斯拼图证法，全对 ✓</div></div>\n    <p>毕达哥拉斯、赵爽弦图、邹元治、加菲尔德（总统）四种面积法证明，代数变形一步没错。这说明：面积法你<b>会算</b>。</p>\n    <p>但是第 1 页考点扫描里，你错了 3 道小题（第 3、5、6 题）。<b>会证明的人为什么栽在小题上？</b>今天这节课就修这个。</p>\n    <div class=\"note\">今天的三个开关：<b>① 读图</b>（第3题）→ <b>② 判断</b>（第5题）→ <b>③ 答完整</b>（第6题）。每个开关大约 8 分钟。</div>"
+    },
+    {
+      "kind": "read",
+      "tag": "第 3 题 · 读题解码",
+      "title": "题里一共有几个正方形？",
+      "html": "<div class=\"imgbox\"><img src=\"./q3_full.jpg\"><div style=\"font-size:13px;color:var(--sub);margin-top:6px\">第 3 题原图：你写的 194 被红笔圈掉了</div></div>\n    <p><b>人话版题意：</b>图里有一个直角三角形，它的三条边上分别\"长\"着一个正方形。两个正方形面积已知（25 和 169），求字母 B 那个正方形的面积。</p>\n    <ul>\n      <li><b>你写的答案：194。</b>25 + 169 = 194，说明你用的是加法。</li>\n      <li><b>红笔圈掉 = 错。</b>正确答案是 144。差在哪个动作上？往下走。</li>\n    </ul>"
+    },
+    {
+      "kind": "quiz",
+      "tag": "第 3 题 · 开关① 读图",
+      "title": "面积 169 的正方形，盖在三角形的哪条边上？",
+      "prompt": "想一想：三个正方形分别贴着直角三角形的三条边。169 是三个面积里最大的，它贴着哪条边？",
+      "options": [
+        {
+          "t": "A. 盖在一条直角边上",
+          "ok": false,
+          "why": "反了。如果 169 在直角边上，那斜边的正方形要更大，可 169 已经是最大的了，矛盾。"
+        },
+        {
+          "t": "B. 盖在斜边上",
+          "ok": true,
+          "why": "对！<b>面积最大的正方形一定贴着斜边</b>——因为斜边是最长的边，斜边的平方 = 两直角边的平方之和，当然最大。"
+        },
+        {
+          "t": "C. 图上看不出来",
+          "ok": false,
+          "why": "看得出来。不用猜位置，用大小就能判断：谁最大谁就在斜边上。这本身就是考点。"
+        }
+      ]
+    },
+    {
+      "kind": "quiz",
+      "tag": "第 3 题 · 勾股定理的'身份'",
+      "title": "a² + b² = c² 里，c² 对应的是哪个正方形的面积？",
+      "prompt": "勾股定理里 c 是斜边。那 c² 这个数，在图上对应什么？",
+      "options": [
+        {
+          "t": "A. 斜边上那个正方形的面积",
+          "ok": true,
+          "why": "对！边长为 c 的正方形面积就是 c²。<b>勾股定理的面积版读法：斜边正方形的面积 = 两个直角边正方形的面积之和。</b>"
+        },
+        {
+          "t": "B. 三个正方形面积的总和",
+          "ok": false,
+          "why": "没有这种定理。别自己发明规则。"
+        },
+        {
+          "t": "C. 直角边上较小正方形的面积",
+          "ok": false,
+          "why": "c 是斜边，不是直角边。"
+        }
+      ]
+    },
+    {
+      "kind": "quiz",
+      "tag": "第 3 题 · 现在算 B",
+      "title": "B 的面积到底等于多少？",
+      "prompt": "已知：两个直角边正方形面积之和 = 斜边正方形面积。25 和 169 一个是直角边的、一个是斜边的。B 是剩下那个直角边正方形。",
+      "options": [
+        {
+          "t": "A. 25 + 169 = 194（你原来的答案）",
+          "ok": false,
+          "why": "这就是错因：把'斜边面积 = 两直角边之和'用反了。25 和 169 里有一个本来就是<b>和</b>（169），再相加就重复算了一次。"
+        },
+        {
+          "t": "B. 169 − 25 = 144",
+          "ok": true,
+          "why": "对！<b>169 是'和'，25 是其中一个'加数'，求另一个加数用减法。</b>169 − 25 = 144。"
+        },
+        {
+          "t": "C. 169 × 25",
+          "ok": false,
+          "why": "乘法在这里没有任何定理支撑。"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "第 3 题 · 母套路小结",
+      "title": "六个字：大减小，不相加",
+      "html": "<div class=\"note\">本题只错在一个动作上：<b>见到两个数就加。</b></div>\n    <p><b>母套路（贴在斜边上的三个正方形）：</b></p>\n    <ol>\n      <li>先认人：<b>面积最大的正方形 = 斜边的</b>（不用看图猜，看大小就知道）。</li>\n      <li>再列式：<b>大 − 小 = 另一个直角边的</b>。</li>\n      <li>口诀：<b>斜边的减直角边的，永远不相加。</b></li>\n    </ol>\n    <p><b>为什么会犯\"见数就加\"？</b>因为做题时没花 10 秒问自己一句：\"169 在图里扮演什么角色？\"\n    先认身份、再动笔，这类错就绝迹了。这就是今天的<b>开关①：读图</b>。</p>"
+    },
+    {
+      "kind": "read",
+      "tag": "第 5 题 · 读题解码",
+      "title": "500 种证法，哪几张图是真的？",
+      "html": "<div class=\"imgbox\"><img src=\"./q5_full.jpg\"><div style=\"font-size:13px;color:var(--sub);margin-top:6px\">第 5 题原图：你圈的 D 被红笔判错，正确答案是 C</div></div>\n    <p><b>人话版题意：</b>下面 4 张图，哪些<b>真能</b>用来验证勾股定理？①②③④，能验证的有几个？</p>\n    <ul>\n      <li><b>你选了 D（4 个都能），正确答案 C（3 个）。</b></li>\n      <li>也就是说：有一张图是\"冒牌货\"——长得像能验证，其实推不出 a²+b²=c²。</li>\n      <li>好玩的是：<b>判定哪张是冒牌货的标准，就藏在你做对的那四道证明题里。</b>往下走。</li>\n    </ul>"
+    },
+    {
+      "kind": "quiz",
+      "tag": "第 5 题 · 开关② 判断",
+      "title": "回顾你做对的 4 道证明：它们的共同套路是什么？",
+      "prompt": "毕达哥拉斯、赵爽弦图、邹元治、加菲尔德——四道题你都是先写①、再写②，然后'∵①=②'。这个①和②分别是什么？",
+      "options": [
+        {
+          "t": "A. 同一个大图形的面积，用两种方法各算一遍",
+          "ok": true,
+          "why": "完全正确！①是大正方形（或梯形）整体面积的算法一，②是拆成小块面积的算法二。同一个东西两种算法，相等才合理，化简就蹦出 a²+b²=c²。"
+        },
+        {
+          "t": "B. 两个不同图形的面积恰好相等",
+          "ok": false,
+          "why": "不同图形面积相等是巧合，证明不了定理。关键在'同一个图形'。"
+        },
+        {
+          "t": "C. 先算三角形面积再乘 4",
+          "ok": false,
+          "why": "那只是②里的一小块，不是套路本体。"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "第 5 题 · 判断标准",
+      "title": "四个字：一图两算",
+      "html": "<div class=\"note\"><b>一张拼图能验证勾股定理 ⟺ 能对\"同一个大图形\"写出两种面积算式，化简后得到 a²+b²=c²。</b></div>\n    <p>这就是判断标准。不是\"图上有没有 c\"，不是\"像不像那个定理\"，就一条：<b>一图两算能不能写出来。</b></p>\n    <p>现在用这条标准挨个检查 4 张图。先提醒一句：图① 和图③ 你其实都见过——它们就是你第 2 页写对的两道证明题的\"原图\"。</p>"
+    },
+    {
+      "kind": "quiz",
+      "tag": "第 5 题 · 检查图①",
+      "title": "图①（两个正方形并排 + 两条虚线 c）：能一图两算吗？",
+      "prompt": "图①里，把整个图形（左边正方形 + 右边正方形 + 上头那个三角形）看成一个整体：算法一算整体（梯形/组合），算法二拆成左边三角形 + 右边三角形 + 中间等腰直角三角形。能推出 a²+b²=c² 吗？",
+      "options": [
+        {
+          "t": "A. 能",
+          "ok": true,
+          "why": "能！它就是<b>加菲尔德（总统）证法的变体</b>：整体 = ½(a+b)²，拆开 = ½ab + ½ab + ½c²，一化简就是 a²+b²=c²。你第 2 页第 4 题写的就是这个道理。"
+        },
+        {
+          "t": "B. 不能",
+          "ok": false,
+          "why": "能。虚线 c 恰好把两个正方形的顶点连成了直角三角形，面积两种算法都成立。"
+        }
+      ]
+    },
+    {
+      "kind": "quiz",
+      "tag": "第 5 题 · 检查图②",
+      "title": "图②（大正方形里嵌 4 个灰色直角三角形）：能一图两算吗？",
+      "prompt": "这张图眼熟吗？想想你第 2 页的第 2 题。",
+      "options": [
+        {
+          "t": "A. 能——这就是赵爽弦图",
+          "ok": true,
+          "why": "对！外层大正方形边长 c，面积 c²；也可以拆成 4 个直角三角形（4×½ab）加中间小正方形 (b−a)²。你第 2 题一字不差证过：c² = ½ab×4 + (b−a)²。"
+        },
+        {
+          "t": "B. 不能",
+          "ok": false,
+          "why": "能。你第 2 页第 2 题的完整证明就是它，总不能推翻自己刚写对的作业吧？"
+        }
+      ]
+    },
+    {
+      "kind": "quiz",
+      "tag": "第 5 题 · 检查图③",
+      "title": "图③（直角梯形，两腰 a、b，两条 c 线段）：能一图两算吗？",
+      "prompt": "图③是一个直角梯形：上底 a、下底 b、高 (a+b)，中间藏着两条长为 c 的线段。算法一：梯形面积公式。算法二：拆成三个三角形。能推出来吗？",
+      "options": [
+        {
+          "t": "A. 能——这就是总统 Garfield 的原始证法",
+          "ok": true,
+          "why": "对！½(a+b)(a+b) = ½ab + ½ab + ½c²，化简得 a²+b²=c²。<b>美国第 20 任总统加菲尔德当年就是这么证的。</b>"
+        },
+        {
+          "t": "B. 不能",
+          "ok": false,
+          "why": "能。梯形公式 + 三块拆分，两算相等，标准的一图两算。"
+        }
+      ]
+    },
+    {
+      "kind": "quiz",
+      "tag": "第 5 题 · 检查图④",
+      "title": "图④（两个正方形并排，各画一条对角线，标个 c）：能一图两算吗？",
+      "prompt": "这是最后一张。整图 = 两个正方形。你能对'同一个大图形'写出两种面积算式，让 c² 和 a²+b² 见面吗？",
+      "options": [
+        {
+          "t": "A. 能",
+          "ok": false,
+          "why": "写不出来。两个正方形的面积就是 a²+b²（或各自对角线算），对角线只属于各自的正方形，根本没有一个'大图形'能既用 a、b 算、又用 c 算。<b>c 只是被人标在了图上，没有任何面积等式能把它和 a、b 连起来。</b>"
+        },
+        {
+          "t": "B. 不能——它就是那个冒牌货",
+          "ok": true,
+          "why": "对！<b>图④只是'图上有 c'，但写不出'一图两算'</b>。没有两种面积表示 → 没有等式 → 什么也验证不了。它长得像验证图，其实是装饰画。"
+        }
+      ]
+    },
+    {
+      "kind": "quiz",
+      "tag": "第 5 题 · 收网",
+      "title": "①②③能，④不能，所以答案是？",
+      "prompt": "3 个能验证。",
+      "options": [
+        {
+          "t": "A. C（3 个）",
+          "ok": true,
+          "why": "对！这就是正确答案。你选 D 的原因：只看'图上有没有 c、像不像'，没检查'能不能一图两算'。"
+        },
+        {
+          "t": "B. D（4 个）",
+          "ok": false,
+          "why": "④是冒牌货，刚刚亲手抓出来的。"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "第 5 题 · 母套路小结",
+      "title": "验证勾股 = 一图两算",
+      "html": "<div class=\"note\"><b>开关②已打开：判断一道\"验证勾股\"的图，只问一句——能不能对同一个大图形写出两种面积算式？</b></div>\n    <ul>\n      <li><b>①②③</b>：都有\"整体 = 拆块\"的两算，能验证。</li>\n      <li><b>④</b>：只有零散的 c 标注，写不出两算，是<b>冒牌图</b>。</li>\n      <li><b>你的错因复盘</b>：第 2 页四道证明全对，说明你<b>会用</b>面积法；但第 5 题考的不是\"会用\"，是<b>会判</b>。会算不会判 = 手里有枪没长眼睛。</li>\n      <li><b>考场动作</b>：见到\"哪张图能验证\"的题，逐图默念\"一图两算？一图两算？\"——写不出两算的直接淘汰。</li>\n    </ul>"
+    },
+    {
+      "kind": "read",
+      "tag": "专题 1 · 四道证明核对结果",
+      "title": "全对。给你盖个章",
+      "html": "<div class=\"imgbox\"><img src=\"./proof2.jpg\"><div style=\"font-size:13px;color:var(--sub);margin-top:6px\">你的第 2 题：赵爽弦图，c² = ½ab×4 + (b−a)² ✓</div></div>\n    <p><b>逐题核对（对照答案册）：</b></p>\n    <ol>\n      <li><b>毕达哥拉斯拼图</b>：(a+b)² = ½ab×4 + c² ✓ 展开、消 2ab，干净利落。</li>\n      <li><b>赵爽弦图</b>：c² = ½ab×4 + (b−a)² ✓ 完全平方展开 (b−a)² = b²+a²−2ab，消项正确。</li>\n      <li><b>邹元治证法</b>：(a+b)² = c² + ½ab×4 ✓ 和第 1 题互为镜像，处理得很好。</li>\n      <li><b>加菲尔德（总统）证法</b>：梯形两算 ab + ½c² = ½a² + ½b² + ab ✓ 消 ab 得 a²+b²=c²。</li>\n    </ol>\n    <div class=\"note\"><b>结论：勾股定理的\"面积法证明\"你已经满分掌握。这部分不用再刷了。</b></div>"
+    },
+    {
+      "kind": "read",
+      "tag": "专题 1 · 书写规范 3 个小提醒",
+      "title": "对是对了，考试再稳一点",
+      "html": "<div class=\"imgbox\"><img src=\"./proof3.jpg\"><div style=\"font-size:13px;color:var(--sub);margin-top:6px\">你的第 3 题：邹元治证法 ✓</div></div>\n    <p>四道全对，但如果想在解答题拿满分书写分，注意三个小地方：</p>\n    <ol>\n      <li><b>开头先\"立规矩\"</b>：写一句\"由题意，4 个直角三角形全等，每个面积为 ½ab；大正方形边长为 (a+b)\"。阅卷老师看你\"为什么面积是 ½ab\"，看到这句才不扣分。</li>\n      <li><b>(b−a)² 要交代来历</b>：赵爽弦图中间小正方形的边长是 b−a（长直角边减短直角边），最好注明\"b ≥ a\"，逻辑就闭环了。</li>\n      <li><b>最后一步别省</b>：\"∵①=② ∴ a²+2ab+b² = 2ab+c² ∴ a²+b²=c²\"——消项那一行写全，别直接跳到结论。</li>\n    </ol>\n    <p>这三条不改也对，改了是<b>从\"对\"到\"无可挑剔\"</b>。</p>"
+    },
+    {
+      "kind": "read",
+      "tag": "第 6 题 · 读题解码",
+      "title": "大树断成两截，问的是'断之前'",
+      "html": "<div class=\"imgbox\"><img src=\"./q6_full.jpg\"><div style=\"font-size:13px;color:var(--sub);margin-top:6px\">第 6 题原图：你的答案被红笔划掉</div></div>\n    <p><b>人话版题意：</b>一棵大树在离地面 6 米高的 B 处折断，树尖 A 落在离树根 C 有 8 米远的地方。问：<b>树断之前</b>总共多高？</p>\n    <ul>\n      <li><b>关键词</b>：\"断裂<b>之前</b>的高度\"——问的是原来那棵完整的大树。</li>\n      <li>断了的树 = 两截：<b>还立着的一截（CB = 6 米）+ 倒下来的一截（BA = ?）</b>。</li>\n    </ul>"
+    },
+    {
+      "kind": "quiz",
+      "tag": "第 6 题 · 开关③ 答完整",
+      "title": "倒下来那一截 BA 有多长？",
+      "prompt": "直角三角形 ACB：直角在 C（树干垂直地面），CB = 6，CA = 8，斜边是倒下来的那截 BA。",
+      "options": [
+        {
+          "t": "A. BA = √(6² + 8²) = 10",
+          "ok": true,
+          "why": "对！6-8-10 勾股数。倒下来的那截长 10 米。"
+        },
+        {
+          "t": "B. BA = 8",
+          "ok": false,
+          "why": "8 是树尖落地点离树根的距离（CA），不是树干那截的长度。"
+        },
+        {
+          "t": "C. BA = 6",
+          "ok": false,
+          "why": "6 是还立着的那截（CB）。"
+        }
+      ]
+    },
+    {
+      "kind": "quiz",
+      "tag": "第 6 题 · 最后一步",
+      "title": "树断之前的高度 = ？",
+      "prompt": "现在手里有：立着的 6 米 + 倒下的 10 米。题目问『断裂之前的高度』。",
+      "options": [
+        {
+          "t": "A. 10 米",
+          "ok": false,
+          "why": "这只是一截。'之前的高度'是完整的大树 = 两截之和。"
+        },
+        {
+          "t": "B. 16 米",
+          "ok": true,
+          "why": "对！6 + 10 = 16 米。<b>断之前 = 还立着的 + 倒下来的，一步都不能省。</b>"
+        },
+        {
+          "t": "C. √6 米",
+          "ok": false,
+          "why": "开方在这里没有意义。勾股定理算的是斜边长度，最后还要回到题目问的'总高度'。"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "第 6 题 · 母套路小结",
+      "title": "折断问题：问'原来'必须加回来",
+      "html": "<div class=\"note\"><b>开关③已打开：应用题的最后一步，回头看一眼题目问的到底是哪一段。</b></div>\n    <ol>\n      <li><b>折断模型三件套</b>：立着的（直角边）、地面的影子（直角边）、倒下的树干（斜边）→ 勾股定理。</li>\n      <li><b>口诀</b>：折断求原高 = 立着的 + 倒下的；求\"倒下的\"才用勾股。</li>\n      <li><b>同款坑</b>：竹竿抵墙、梯子滑动、风筝线——凡是\"原来有多长\"，都是<b>两段相加</b>，勾股只负责其中一段。</li>\n    </ol>"
+    },
+    {
+      "kind": "read",
+      "tag": "体检总报告 · 说人话",
+      "title": "做了 7 套卷为什么还错题？",
+      "html": "<div class=\"imgbox\"><img src=\"./proof4.jpg\"><div style=\"font-size:13px;color:var(--sub);margin-top:6px\">你的第 4 题：总统证法 ✓——硬实力的证据</div></div>\n    <p><b>真相：你不是\"没学会\"，你是陷入了\"熟练度幻觉\"。</b></p>\n    <p>7 套卷里，你会的题（面积法、证明、常规计算）每套都重复出现、反复做对——越做越熟。而真正错的点，每次卷子只碰一两道，做错了对个答案就翻篇，<b>从来没被单独拎出来练过</b>。所以卷子刷得越多，\"会的更熟、不会的照样不会\"。</p>\n    <p><b>这 3 道错题，暴露的是同一件事：你拿到图就急着算，跳过了\"先看清图在说什么\"。</b></p>\n    <ul>\n      <li>第 3 题：没问\"169 是谁\" → 见数就加（194 ✗）</li>\n      <li>第 5 题：没问\"这张图有没有两算\" → 见 c 就选（D ✗）</li>\n      <li>第 6 题：没问\"题目问的是哪一段\" → 算完就交（✗）</li>\n    </ul>\n    <p><b>好消息是：这三个错误是同一个错误（跳过读图），所以只需要练一个习惯。</b></p>"
+    },
+    {
+      "kind": "summary",
+      "tag": "考前 60 秒小结卡",
+      "title": "三个开关 + 三句口诀",
+      "html": "<div class=\"note\"><b>动笔前 10 秒，过一遍这三个开关：</b></div>\n    <ol>\n      <li><b>开关① 读图</b>：图里每个数、每条边是什么身份？<br>\n          口诀：<b>斜边正方形面积最大；求直角边的正方形，大减小，不相加。</b></li>\n      <li><b>开关② 判断</b>：\"哪张图能验证勾股\"→ 只认<b>一图两算</b>（同一个图形、两种面积算法）。图上有 c ≠ 能验证。</li>\n      <li><b>开关③ 答完整</b>：算完斜着看一眼题目——问的是\"哪一段\"？<br>\n          口诀：<b>折断求原高 = 立着的 + 倒下的。</b></li>\n    </ol>\n    <div class=\"note\"><b>你不用再刷第 8 套卷。你需要的只是：接下来每道几何题，动笔前先花 10 秒走完三个开关。</b></div>"
+    },
+    {
+      "kind": "quiz",
+      "tag": "145+ 自测 · 迁移 1（考开关①）",
+      "title": "换数字：还是三边正方形",
+      "prompt": "<p>直角三角形三条边上分别作正方形。已知<b>斜边</b>上正方形的面积是 100，一条直角边上正方形的面积是 64。另一条直角边上正方形的面积是多少？</p>",
+      "options": [
+        {
+          "t": "A. 164",
+          "ok": false,
+          "why": "又相加了！100 是斜边的（= 和），要减。"
+        },
+        {
+          "t": "B. 36",
+          "ok": true,
+          "why": "对！100 − 64 = 36。大减小，一秒出答案。"
+        },
+        {
+          "t": "C. 100",
+          "ok": false,
+          "why": "那是斜边的面积，不是问的这个。"
+        }
+      ]
+    },
+    {
+      "kind": "quiz",
+      "tag": "145+ 自测 · 迁移 2（考开关②）",
+      "title": "小明的'新证法'靠谱吗？",
+      "prompt": "<p>小明说：\"我画了两个并排的正方形，边长分别是 a 和 b，各画一条对角线，把对角线标成 c。看，图上有 a、b、c，这就验证了勾股定理 a²+b²=c²！\"</p>\n    <p>小明说得对吗？</p>",
+      "options": [
+        {
+          "t": "A. 对，图上有三个字母就行",
+          "ok": false,
+          "why": "④的翻版。图上有 c 不等于 c 和 a、b 有面积等式关系。"
+        },
+        {
+          "t": "B. 不对——他的图写不出'一图两算'",
+          "ok": true,
+          "why": "对！对角线 c 只是自己正方形的对角线，整个图形没有任何'同一图形的两种面积算法'，验证无从谈起。这就是第 5 题图④的陷阱。"
+        }
+      ]
+    },
+    {
+      "kind": "quiz",
+      "tag": "145+ 自测 · 迁移 3（考开关③）",
+      "title": "竹竿折断",
+      "prompt": "<p>一根竹竿靠在院子里，在离地面 3 米高的地方折断（还连着没断开），竿顶落在离竿根 4 米远的地方。这根竹竿<b>折断之前</b>有多长？</p>",
+      "options": [
+        {
+          "t": "A. 5 米",
+          "ok": false,
+          "why": "5 是折倒的那截（斜边），题目问的是整根竿子。"
+        },
+        {
+          "t": "B. 7 米",
+          "ok": false,
+          "why": "3 + 4 = 7 不对——4 是地面距离，不是竿子的一段。"
+        },
+        {
+          "t": "C. 8 米",
+          "ok": true,
+          "why": "对！倒下的一截 = √(3²+4²) = 5，原长 = 立着的 3 + 倒下的 5 = <b>8 米</b>。三个开关全过，漂亮。"
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "tag": "145+ 自测 · 评分",
+      "title": "给自己打个分",
+      "html": "<p>按 6 维度给自己打分（每维 0~3，满分 18）：</p>\n    <ul>\n      <li><b>读题</b>：动笔前是否先问\"每个数是谁、问的是哪段\"？</li>\n      <li><b>建模</b>：能否 10 秒报出母套路（大减小 / 一图两算 / 折断两段和）？</li>\n      <li><b>分步</b>：面积法证明书写有没有\"立规矩\"那句？</li>\n      <li><b>避坑</b>：见数相加、见 c 就选、算完不回看——这三个坑避开了吗？</li>\n      <li><b>规范</b>：∵①=② 消项写全了吗？</li>\n      <li><b>迁移</b>：三道迁移题是否全对？</li>\n    </ul>\n    <div class=\"note\">≥18 稳 145+；15~17 冲刺档；<15 把今天的\"三个开关\"重读一遍再做练习卷。</div>\n    <div class=\"done\">特训课结束，去练习卷独立做一遍吧！</div>"
+    }
+  ]
+};
+window.COURSE = COURSE;
+
+
+/* ===================== 渲染引擎（一般不用改） ===================== */
+const stage = document.getElementById('stage');
+document.getElementById('courseTitle').textContent = COURSE.title;
+document.getElementById('courseSub').textContent = COURSE.subtitle;
+const bar = document.getElementById('bar');
+let cur = 0;
+
+function scrollTop(){
+  const el = document.querySelector('.wrap');
+  if (el && el.scrollIntoView) { try{ el.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){} }
+}
+
+function render(i){
+  cur = i;
+  const total = COURSE.steps.length;
+  bar.style.width = Math.round((i)/(total-1)*100) + '%';
+  stage.innerHTML = '';
+  const s = COURSE.steps[i];
+  const card = document.createElement('div');
+  card.className = 'step active';
+  let inner = '';
+  if (s.tag) inner += `<span class="tag">${s.tag}</span>`;
+  inner += `<h2>${s.title}</h2>`;
+  if (s.kind === 'quiz'){
+    inner += `<p>${s.prompt}</p><div class="opts" id="opts"></div><div class="fb" id="fb"></div>`;
+  } else {
+    inner += s.html || '';
+  }
+  // 导航按钮
+  const isLast = (i === total-1);
+  inner += `<div class="nav">`;
+  inner += i>0 ? `<button class="btn btn-back" id="back">← 上一步</button>` : `<span></span>`;
+  if (!isLast){
+    inner += `<button class="btn btn-next" id="next">下一步 →</button>`;
+  } else if (s.kind !== 'summary'){
+    inner += `<button class="btn btn-next" id="next">完成 ✓</button>`;
+  } else {
+    inner += `<span></span>`;
+  }
+  inner += `</div>`;
+  card.innerHTML = inner;
+  stage.appendChild(card);
+
+  if (s.kind === 'quiz') buildQuiz(s, card);
+  // 绑定导航
+  const nextBtn = card.querySelector('#next');
+  if (nextBtn){
+    if (s.kind === 'quiz'){ nextBtn.disabled = true; } // 答题后才解锁
+    nextBtn.addEventListener('click', ()=>{ if(!nextBtn.disabled) render(i+1); });
+  }
+  const backBtn = card.querySelector('#back');
+  if (backBtn) backBtn.addEventListener('click', ()=> render(i-1));
+  scrollTop();
+}
+
+function buildQuiz(s, card){
+  const optsBox = card.querySelector('#opts');
+  const fb = card.querySelector('#fb');
+  const nextBtn = card.querySelector('#next');
+  s.options.forEach((o, idx)=>{
+    const div = document.createElement('div');
+    div.className = 'opt';
+    div.innerHTML = `<span class="mk">${String.fromCharCode(65+idx)}</span><span>${o.t}</span>`;
+    div.addEventListener('click', ()=>{
+      // 锁定所有选项（避免重复点）
+      optsBox.querySelectorAll('.opt').forEach(el=>{ el.classList.add('locked'); });
+      // 先启用"下一步"（关键：绝不被反馈 handler 卡住）
+      if (nextBtn) nextBtn.disabled = false;
+      // 标出对错
+      div.classList.add(o.ok ? 'correct' : 'wrong', 'chosen');
+      if (!o.ok){
+        // 顺便高亮正确答案，让学生看到正解
+        optsBox.querySelectorAll('.opt').forEach((el,k)=>{ if(s.options[k].ok) el.classList.add('correct'); });
+      }
+      // 揭示评语（try/catch 兜底）
+      try{
+        fb.className = 'fb show ' + (o.ok ? 'ok' : 'bad');
+        fb.innerHTML = (o.ok ? '✅ <b>答对了：</b>' : '⚠️ <b>再看一眼：</b>') + o.why;
+      }catch(e){ /* 反馈出错也不影响下一步 */ }
+      scrollTop();
+    });
+    optsBox.appendChild(div);
+  });
+}
+
+render(0);
+</script>
+<script>
+document.addEventListener('click', function(e){
+  if(e.target.tagName==='IMG' && e.target.closest('.imgbox')){
+    e.target.classList.toggle('zoom');
+  }
+});
+</script>
+</body>
+</html>
