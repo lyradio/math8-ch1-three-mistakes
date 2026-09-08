@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>苏格拉底互动特训课</title>
+<!--
+  =====================================================================
+  初中数学 · 苏格拉底互动特训课 模板（math-socratic-trainer 技能资产）
+  ---------------------------------------------------------------------
+  怎么用：复制本文件，只改下面的 COURSE 对象即可，不要从零写 HTML。
+
+  已修复的已知坑（详见技能 SKILL.md Pitfalls）：
+    ✅ 原生 CSS，不用 Tailwind @apply
+    ✅ 选项绝不预显示"对/接近/反了"——评语只在点击后揭示
+    ✅ 不用 window['check'+id] 拼函数名，改用数据驱动 + 闭包绑定
+    ✅ 不用 split('-') 解析 dash（旧坑：c1-1 → NaN → 下一步死锁）
+       本模板用"步骤索引"驱动，根本不存在 dash 解析
+    ✅ checkQuiz：先启用"下一步"，再 try/catch 显示反馈——
+       反馈 handler 报错也绝不会卡住下一步
+    ✅ scrollIntoView 带 if 防御（部分 webview 缺该方法）
+  几何/题干图：用 PDF 真实截图 base64 嵌入 <img>，严禁手绘 SVG。
+  =====================================================================
+-->
+<style>
+  :root{
+    --bg:#f6f7fb; --card:#ffffff; --ink:#1f2430; --sub:#5b6472;
+    --line:#e6e9f0; --accent:#4f6ef7; --accent-soft:#eef1fe;
+    --ok:#1f9d6b; --ok-soft:#e7f7ef; --bad:#e0533d; --bad-soft:#fdecea;
+    --warn:#b7791f; --radius:16px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.7;padding:18px}
+  .wrap{max-width:760px;margin:0 auto}
+  .head{background:linear-gradient(135deg,#4f6ef7,#7b5cf0);color:#fff;
+    border-radius:var(--radius);padding:22px 24px;margin-bottom:16px;
+    box-shadow:0 8px 24px rgba(79,110,247,.25)}
+  .head h1{font-size:21px;letter-spacing:.5px}
+  .head p{opacity:.92;margin-top:6px;font-size:14px}
+  .progress{height:8px;background:rgba(255,255,255,.35);border-radius:99px;
+    margin-top:14px;overflow:hidden}
+  .progress>i{display:block;height:100%;width:0;background:#fff;
+    border-radius:99px;transition:width .3s}
+  .step{display:none;background:var(--card);border:1px solid var(--line);
+    border-radius:var(--radius);padding:22px 22px 18px;margin-bottom:14px;
+    box-shadow:0 4px 16px rgba(31,36,48,.05)}
+  .step.active{display:block;animation:fade .35s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .tag{display:inline-block;font-size:12px;font-weight:700;color:var(--accent);
+    background:var(--accent-soft);padding:3px 10px;border-radius:99px;margin-bottom:10px}
+  .step h2{font-size:18px;margin-bottom:12px}
+  .step p,.step li{font-size:15.5px;color:var(--ink)}
+  .step p{margin:8px 0}
+  .step ul,.step ol{margin:8px 0 8px 22px}
+  .step li{margin:5px 0}
+  .note{background:var(--accent-soft);border-left:4px solid var(--accent);
+    padding:10px 14px;border-radius:10px;margin:12px 0;font-size:14.5px;color:#2b3550}
+  .imgbox{margin:14px 0;text-align:center}
+  .imgbox img{max-width:100%;border:1px solid var(--line);border-radius:12px;background:#fff}
+  .opts{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+  .opt{display:flex;align-items:flex-start;gap:10px;cursor:pointer;
+    border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;
+    font-size:15px;transition:.15s;background:#fff}
+  .opt:hover{border-color:var(--accent);background:var(--accent-soft)}
+  .opt .mk{flex:0 0 22px;height:22px;border-radius:50%;border:1.5px solid #c4cad6;
+    display:flex;align-items:center;justify-content:center;font-size:13px;color:#8a93a3;font-weight:700}
+  .opt.chosen{border-color:var(--accent)}
+  .opt.correct{border-color:var(--ok);background:var(--ok-soft)}
+  .opt.wrong{border-color:var(--bad);background:var(--bad-soft)}
+  .opt.locked{cursor:default;pointer-events:none}
+  .fb{margin-top:14px;padding:12px 14px;border-radius:12px;font-size:14.5px;
+    display:none}
+  .fb.show{display:block;animation:fade .3s}
+  .fb.ok{background:var(--ok-soft);border:1px solid #bfe9d3;color:#146b48}
+  .fb.bad{background:var(--bad-soft);border:1px solid #f6c9c0;color:#8f2f20}
+  .fb b{color:inherit}
+  .nav{display:flex;justify-content:space-between;gap:10px;margin-top:18px}
+  .btn{border:none;border-radius:12px;padding:12px 20px;font-size:15px;
+    font-weight:700;cursor:pointer;transition:.15s}
+  .btn-next{background:var(--accent);color:#fff;flex:1}
+  .btn-next:hover{background:#3f5ce8}
+  .btn-next:disabled{background:#c8cee0;color:#fff;cursor:not-allowed}
+  .btn-back{background:#fff;color:var(--sub);border:1.5px solid var(--line)}
+  .btn-back:hover{border-color:var(--accent);color:var(--accent)}
+  .done{text-align:center;padding:8px 0 4px;color:var(--ok);font-weight:700}
+  .foot{text-align:center;color:var(--sub);font-size:12.5px;margin:8px 0 28px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <h1 id="courseTitle">互动特训课</h1>
+    <p id="courseSub">跟着问题一步步想，别急着看答案</p>
+    <div class="progress"><i id="bar"></i></div>
+  </div>
+  <div id="stage"></div>
+  <div class="foot">讲人话 · 一步步来 · 你一定能看懂</div>
+</div>
+
+<script>
+/* =====================================================================
+   只改这里：COURSE 对象
+   - steps 是一道题拆成的若干引导环节
+   - kind: "read" 讲解/读题 | "quiz" 选择题 | "summary" 母套路小结卡
+   - quiz 的 options: {t:选项文字, ok:是否正确答案, why:点击后才显示的讲解}
+   - why 里可以放 <b> 等简单 HTML
+   ===================================================================== */
+var COURSE = {
+  "title": "动点分类 + 展开最短路径 · 三题连讲特训",
+  "subtitle": "两个母套路：分类讨论（直角/等腰）+ 展开化归（鱼缸蚂蚁）",
+  "steps": [
+    {
+      "kind": "read",
+      "tag": "开场 · 这三道题卡在同一个开关上",
+      "title": "先说你做对的：第(1)问满分",
+      "html": "<p>第(1)问 BC = 4，<strong>完全正确</strong>，勾股用得又快又准 👍</p>\n    <img src=\"c0908_kid1.jpg\" style=\"width:100%;max-width:430px;border:1px solid #ddd;border-radius:8px;display:block;margin:8px auto\">\n    <p>但第(2)问你写到 <b>CP = t − 4</b> 就停住了，第(3)问和鱼缸题没动笔。</p>\n    <div class=\"note\">这三道题背后是<strong>同一个开关</strong>：<b>分类讨论</b>——题目说\"当△ABP是直角三角形\"\"是等腰三角形\"时，<strong>没告诉你是哪一种</strong>，就要把所有可能摆出来一个个算。这正是你 7 月错题档案里记过的老对手，今天彻底收了它。</div>"
+    },
+    {
+      "kind": "read",
+      "tag": "动点题 · 先做一件事：用 t 把线段全表示出来",
+      "title": "P 走到哪了？看 t 就知道",
+      "html": "<p>P 从 B 出发沿射线 BC 走，速度 1 cm/s，走的时间是 t 秒 → <b>BP = t</b>。第(1)问已算出 BC = 4。</p>\n    \n<svg viewBox=\"0 0 420 90\" style=\"width:100%;max-width:430px;background:#fff;border:1px solid #ddd;border-radius:8px\">\n  <line x1=\"30\" y1=\"50\" x2=\"390\" y2=\"50\" stroke=\"#333\" stroke-width=\"2\"/>\n  <polygon points=\"390,50 380,45 380,55\" fill=\"#333\"/>\n  <circle cx=\"60\" cy=\"50\" r=\"5\" fill=\"#2c6fbb\"/>\n  <text x=\"60\" y=\"72\" font-size=\"13\" fill=\"#2c6fbb\" text-anchor=\"middle\" font-weight=\"bold\">B (0)</text>\n  <circle cx=\"180\" cy=\"50\" r=\"5\" fill=\"#3d9c63\"/>\n  <text x=\"180\" y=\"72\" font-size=\"13\" fill=\"#3d9c63\" text-anchor=\"middle\" font-weight=\"bold\">C (4)</text>\n  <circle cx=\"300\" cy=\"50\" r=\"5\" fill=\"#c0392b\"/>\n  <text x=\"300\" y=\"72\" font-size=\"13\" fill=\"#c0392b\" text-anchor=\"middle\" font-weight=\"bold\">P (t)</text>\n  <line x1=\"60\" y1=\"42\" x2=\"180\" y2=\"42\" stroke=\"#999\" stroke-width=\"1\" stroke-dasharray=\"4,3\"/>\n  <text x=\"120\" y=\"34\" font-size=\"11\" fill=\"#999\" text-anchor=\"middle\">t&lt;4：P 在 B、C 之间</text>\n  <line x1=\"180\" y1=\"26\" x2=\"300\" y2=\"26\" stroke=\"#bbb\" stroke-width=\"1\" stroke-dasharray=\"4,3\"/>\n  <text x=\"240\" y=\"18\" font-size=\"11\" fill=\"#999\" text-anchor=\"middle\">t&gt;4：P 冲过 C</text>\n</svg>\n    <p>P 的位置分三种：</p>\n    <ul>\n      <li><b>t &lt; 4</b>：P 在 B、C 之间，CP = 4 − t</li>\n      <li><b>t = 4</b>：P 恰好压在 C 上</li>\n      <li><b>t &gt; 4</b>：P 冲过 C，CP = t − 4</li>\n    </ul>\n    <div class=\"note\">你写的 <b>CP = t − 4</b> 没错，但它<strong>只在 t &gt; 4 时成立</strong>。你等于默认\"P 一定冲过 C\"——这就是卡住的原因：另外两种位置被你漏掉了。<b>动点题的铁律：P 的位置要先分段，再动笔。</b></div>"
+    },
+    {
+      "kind": "quiz",
+      "tag": "热身 · t = 7 时",
+      "title": "t = 7 时，P 在哪？CP = ?",
+      "prompt": "BC = 4。t = 7 > 4，P 冲过了 C。BP = 7，BC = 4，那 CP 等于多少？",
+      "options": [
+        {
+          "t": "P 在 C 右边，CP = 7 − 4 = 3",
+          "ok": true,
+          "why": "对！BP − BC = CP，7 − 4 = 3。此时用 CP = t − 4 是合法的。"
+        },
+        {
+          "t": "P 在 B、C 之间，CP = 4 − 7 = −3",
+          "ok": false,
+          "why": "t = 7 > 4，P 早就冲过 C 了，不在 B、C 之间。距离也不能是负数。"
+        },
+        {
+          "t": "P 恰好在 C 上，CP = 0",
+          "ok": false,
+          "why": "那是 t = 4 的时候。t = 7 时 P 已经走出去 3 cm 了。"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "第(2)问 · 母套路",
+      "title": "「当△ABP为直角三角形」= 直角顶点不确定",
+      "html": "<p>母套路卡（你的错题档案里就有它）：</p>\n    <div class=\"note\"><b>说\"当 XX 是直角三角形\"却不说直角在哪 → 直角顶点有几种可能就分几类，一类一类算，最后把所有解合起来。</b></div>\n    <p>△ABP 三个顶点 A、B、P，直角可能压在谁身上？一共<strong>三类</strong>：∠A = 90°、∠B = 90°、∠P = 90°。</p>"
+    },
+    {
+      "kind": "quiz",
+      "tag": "第(2)问 · 先筛掉不可能的",
+      "title": "三类里，哪一类根本不用算？",
+      "prompt": "B 处的角：P 永远在射线 BC 上，所以 ∠ABP 就是原三角形的 ∠ABC，它是固定的。三边 3、4、5 里，∠C = 90°，那 ∠B 是多少度？它可能是 90° 吗？",
+      "options": [
+        {
+          "t": "∠B ≈ 37°，不可能是 90°，∠B = 90° 这类直接划掉",
+          "ok": true,
+          "why": "对！3、4、5 的三角形里 ∠C = 90°，∠B 是锐角（cos∠B = 4/5 ≠ 0）。<b>B 处永远变不成直角</b>，这类不用算。这就是分类讨论的第一步：先筛掉不可能的，少算一类。"
+        },
+        {
+          "t": "∠B 也可能等于 90°，要算",
+          "ok": false,
+          "why": "一个三角形里只能有一个直角。∠C = 90° 已经定了，∠B 只能是锐角；而且 P 在 BC 射线上移动，∠ABP 始终就是 ∠ABC，不会变。"
+        },
+        {
+          "t": "∠A = 90° 不可能，要划掉",
+          "ok": false,
+          "why": "划错了。∠A 原来是 53° 的锐角，但 P 在动，AP 这条边在转，∠BAP 完全可能转到 90°。要算！"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "第(2)问 · 情况一：∠P = 90°",
+      "title": "P 处成直角 → P 必须站在 C 上",
+      "html": "<p>∠APB = 90° 意思是 <b>AP ⊥ BC</b>。而原题里 <b>∠C = 90°，也就是 AC ⊥ BC</b>。</p>\n    <p>过 A 向直线 BC 作垂线，垂足<strong>只有一个</strong>——就是 C。所以 P 必须和 C 重合：</p>\n    <p style=\"text-align:center;font-size:17px\">BP = BC = 4 → <b>t = 4</b></p>\n    <div class=\"note\">这一类其实一眼就能看出来：P 走到 C 的那一刻，△ABP 就是原来的 △ABC，天然是直角三角形。<b>t = 4</b> 是第一个解。</div>"
+    },
+    {
+      "kind": "read",
+      "tag": "第(2)问 · 情况二：∠A = 90°",
+      "title": "A 处成直角 → BP 变成斜边，勾股列方程",
+      "html": "<p>∠BAP = 90° 时，直角在 A，<strong>斜边就是 BP</strong>。勾股定理上阵：</p>\n    <p style=\"text-align:center;font-size:16px\"><b>BP² = AB² + AP²</b></p>\n    <p>逐个表示（这就是第一步\"用 t 表示线段\"的回报）：</p>\n    <ul>\n      <li>BP = t</li>\n      <li>AB = 5</li>\n      <li>AP：从 A 竖直下来到 C 是 3，再横着走 CP = t − 4 → <b>AP² = 3² + (t−4)²</b>（此刻 P 在 C 右边，因为要让 ∠A 张成直角，P 得离 C 远一点）</li>\n    </ul>\n    <p>代入：</p>\n    <p style=\"text-align:center;font-size:16px\">t² = 25 + 9 + (t − 4)²<br>\n    t² = 34 + t² − 8t + 16<br>\n    8t = 50 → <b>t = 25/4</b></p>\n    <p>检验：25/4 = 6.25 &gt; 4 ✓（P 确实在 C 右边，CP = t − 4 合法）</p>\n    <div class=\"note\">t² 两边消掉，一次方程秒解——<b>动点勾股题设了 t 之后，最后往往变成一次方程</b>，别怕它。</div>"
+    },
+    {
+      "kind": "quiz",
+      "tag": "第(2)问 · 收口",
+      "title": "第(2)问的完整答案是什么？",
+      "prompt": "两类都算完了：∠P = 90° 得 t = 4；∠A = 90° 得 t = 25/4。合起来怎么写？",
+      "options": [
+        {
+          "t": "t = 4 或 t = 25/4",
+          "ok": true,
+          "why": "对！<b>两个解都写上</b>。分类讨论题的答案 = 各类解的并集，漏一个就丢一半分。"
+        },
+        {
+          "t": "t = 25/4",
+          "ok": false,
+          "why": "漏了 t = 4。P 走到 C 的那一刻（∠APB = 90°）也是一个合法时刻——这正是「只考虑 t > 4」付出的代价。"
+        },
+        {
+          "t": "t = 4 或 t = 25/4 或 t = −25/4",
+          "ok": false,
+          "why": "t 是时间，必须 t ≥ 0，负解舍去。另外这里也没有负解产生（8t = 50 只有一个正根）。"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "第(3)问 · 母套路",
+      "title": "「等腰三角形」= 腰不确定 → 三类",
+      "html": "<p>△ABP 三条边：AB = 5、BP = t、AP² = 9 + (t−4)²。</p>\n    <div class=\"note\"><b>等腰 = 有两条边相等。三条边两两配对，一共三种配法：AB=AP、AB=BP、AP=BP。每一种都是一类，必须逐一去算。</b></div>\n    <p>和第(2)问一模一样的打法：分类 → 表示 → 列式 → 合并答案。</p>"
+    },
+    {
+      "kind": "quiz",
+      "tag": "第(3)问 · 类一：AB = BP",
+      "title": "AB = BP = 5，求 t",
+      "prompt": "BP 就是 t，AB = 5。直接相等：t = ?",
+      "options": [
+        {
+          "t": "t = 5",
+          "ok": true,
+          "why": "对！t = 5 > 4，P 在 C 右边 1 cm 处，△ABP 中 AB = BP = 5，等腰成立 ✓"
+        },
+        {
+          "t": "t = 4",
+          "ok": false,
+          "why": "t = 4 时 BP = 4 ≠ 5，那是第(2)问直角的解，别串门。"
+        },
+        {
+          "t": "t = 25/8",
+          "ok": false,
+          "why": "25/8 是第三类 AP = BP 的解，现在算的是 AB = BP。"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "第(3)问 · 类二：AB = AP",
+      "title": "AB = AP = 5 → 解出 CP，小心有一解要舍",
+      "html": "<p>AP² = AB² = 25，而 AP² = 9 + CP²：</p>\n    <p style=\"text-align:center;font-size:16px\">9 + CP² = 25 → CP² = 16 → <b>CP = 4</b></p>\n    <p>CP = 4 的 P 在哪？<strong>有两个</strong>：</p>\n    <ul>\n      <li>P 在 C 左边 4 cm 处 = 恰好回到 B → t = 0，P 和 B 重合，<strong>三点不构成三角形，舍！</strong></li>\n      <li>P 在 C 右边 4 cm 处 → t = 4 + 4 = <b>8</b> ✓</li>\n    </ul>\n    <div class=\"note\">这就是<strong>分类讨论套着分类讨论</strong>：CP = 4 在直线上左右各有一个点。t = 0 那个不是\"算错\"，是\"不合题意\"——书写时写一句\"t = 0 时 P 与 B 重合，不能构成三角形，舍去\"，这一分就稳了。</div>"
+    },
+    {
+      "kind": "quiz",
+      "tag": "第(3)问 · 类三：AP = BP",
+      "title": "列方程：t² = 9 + (t−4)²，解出 t = ?",
+      "prompt": "AP = BP，即 AP² = BP²：9 + (t−4)² = t²。展开：9 + t² − 8t + 16 = t²。",
+      "options": [
+        {
+          "t": "t = 25/8",
+          "ok": true,
+          "why": "对！8t = 25，t = 25/8 = 3.125。<b>注意此时 t < 4，P 在 B、C 之间</b>——你之前写的 CP = t − 4 在这里要换成 CP = 4 − t，方程里 (t−4)² 一样成立（平方吞掉符号）。"
+        },
+        {
+          "t": "t = 8",
+          "ok": false,
+          "why": "t = 8 是类二 AB = AP 的解。类三的方程 8t = 25 解出来是 25/8。"
+        },
+        {
+          "t": "t = 25/8 或 t = −25/8",
+          "ok": false,
+          "why": "展开后 t² 消掉了，只剩一次方程 8t = 25，只有一个根 25/8，没有 ±。"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "第(3)问 · 收口",
+      "title": "三个解一起交",
+      "html": "<div class=\"note\" style=\"font-size:15px\"><b>第(3)问答案：t = 25/8 或 t = 5 或 t = 8</b></div>\n    <table style=\"width:100%;border-collapse:collapse;font-size:14px;margin:8px 0\">\n      <tr style=\"background:#f0f4f8\"><th style=\"border:1px solid #ddd;padding:6px\">类别</th><th style=\"border:1px solid #ddd;padding:6px\">方程</th><th style=\"border:1px solid #ddd;padding:6px\">解</th><th style=\"border:1px solid #ddd;padding:6px\">P 的位置</th></tr>\n      <tr><td style=\"border:1px solid #ddd;padding:6px\">AB = BP</td><td style=\"border:1px solid #ddd;padding:6px\">t = 5</td><td style=\"border:1px solid #ddd;padding:6px\"><b>t = 5</b></td><td style=\"border:1px solid #ddd;padding:6px\">C 右边 1cm</td></tr>\n      <tr><td style=\"border:1px solid #ddd;padding:6px\">AB = AP</td><td style=\"border:1px solid #ddd;padding:6px\">9+CP²=25 → CP=4</td><td style=\"border:1px solid #ddd;padding:6px\"><b>t = 8</b>（t=0 舍）</td><td style=\"border:1px solid #ddd;padding:6px\">C 右边 4cm</td></tr>\n      <tr><td style=\"border:1px solid #ddd;padding:6px\">AP = BP</td><td style=\"border:1px solid #ddd;padding:6px\">t²=9+(t−4)²</td><td style=\"border:1px solid #ddd;padding:6px\"><b>t = 25/8</b></td><td style=\"border:1px solid #ddd;padding:6px\">B、C 之间</td></tr>\n    </table>\n    <p>三个解对应 P 的<strong>三个不同位置</strong>——这就是动点题的魅力：一个 t 能扫出好几个答案。</p>"
+    },
+    {
+      "kind": "read",
+      "tag": "鱼缸题 · 读题",
+      "title": "蚂蚁在哪，面包屑在哪？",
+      "html": "<img src=\"c0908_q2.jpg\" style=\"width:100%;max-width:430px;border:1px solid #ddd;border-radius:8px;display:block;margin:8px auto\">\n    <p>翻译成关键信息：</p>\n    <ul>\n      <li><b>A</b>：鱼缸<strong>外</strong>的点（前壁外侧的底角）</li>\n      <li><b>G</b>：鱼缸<strong>内</strong>壁水面处，离右棱 F 只有 30 cm</li>\n      <li>缸高 AB = 50，水深 AE = 40 → <b>G 离缸口只有 50 − 40 = 10 cm</b></li>\n      <li>蚂蚁<strong>只能沿着缸壁爬</strong>，不能飞</li>\n    </ul>\n    <p>求：最短路程的<strong>平方</strong>（注意是问平方，不是问路程本身！）</p>"
+    },
+    {
+      "kind": "quiz",
+      "tag": "鱼缸题 · 路线判断",
+      "title": "A 在外面底角，G 在里面离缸口 10 cm。最短路线应该怎么走？",
+      "prompt": "蚂蚁只能沿壁爬。从外面进到里面，必须翻过一条棱。翻哪条棱路程最短？",
+      "options": [
+        {
+          "t": "向上翻过顶棱：先爬 50 到缸口，再下去 10 到 G",
+          "ok": true,
+          "why": "对！G 离缸口只有 10 cm，翻顶棱总路程 ≈ 50 + 10 再加水平移动，最合算。<br>翻底棱要 40 + 50 绕一大圈；翻侧棱还多绕宽度，都更长。"
+        },
+        {
+          "t": "向下钻过底棱",
+          "ok": false,
+          "why": "水面 G 在上方，往下绕要先下 40 再上爬 50 回来，明显绕远。"
+        },
+        {
+          "t": "直接穿过玻璃直线过去",
+          "ok": false,
+          "why": "题目规定「沿鱼缸壁爬」，玻璃穿不过去——这正是这道题要你「沿表面走」的原因。"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "鱼缸题 · 化归：把墙展开拍平",
+      "title": "立体最短路径 → 平面两点连线",
+      "html": "<p>母套路（家底级）：<b>求\"沿表面走\"的最短路径 → 把走过的面沿那条棱展开、摊平 → 变成平面上两点之间的距离 → 两点之间线段最短 + 勾股定理。</b></p>\n    <p>把前壁的<strong>外侧面</strong>和<strong>内侧面</strong>沿顶棱摊平，A 和 G 就躺在同一个平面上：</p>\n    \n<svg viewBox=\"0 0 300 260\" style=\"width:100%;max-width:430px;background:#fff;border:1px solid #ddd;border-radius:8px\">\n  <!-- 顶棱（折痕） -->\n  <rect x=\"30\" y=\"20\" width=\"240\" height=\"150\" fill=\"#eef5ff\" stroke=\"#4a7dbd\" stroke-width=\"1.5\"/>\n  <text x=\"150\" y=\"14\" font-size=\"11\" fill=\"#666\" text-anchor=\"middle\">外侧前壁（向上爬 50）</text>\n  <rect x=\"30\" y=\"170\" width=\"240\" height=\"30\" fill=\"#e8f6ec\" stroke=\"#3d9c63\" stroke-width=\"1.5\"/>\n  <text x=\"150\" y=\"216\" font-size=\"11\" fill=\"#666\" text-anchor=\"middle\">内侧前壁（从顶下到 G 再 10）</text>\n  <line x1=\"30\" y1=\"170\" x2=\"270\" y2=\"170\" stroke=\"#c0392b\" stroke-width=\"2.5\"/>\n  <text x=\"278\" y=\"174\" font-size=\"11\" fill=\"#c0392b\">顶棱</text>\n  <!-- A 与 G -->\n  <circle cx=\"30\" cy=\"170\" r=\"4.5\" fill=\"#c0392b\"/>\n  <text x=\"18\" y=\"184\" font-size=\"13\" fill=\"#c0392b\" font-weight=\"bold\">A</text>\n  <circle cx=\"180\" cy=\"200\" r=\"4.5\" fill=\"#8e44ad\"/>\n  <text x=\"188\" y=\"205\" font-size=\"13\" fill=\"#8e44ad\" font-weight=\"bold\">G</text>\n  <!-- AG 连线 -->\n  <line x1=\"30\" y1=\"170\" x2=\"180\" y2=\"200\" stroke=\"#8e44ad\" stroke-width=\"2.5\" stroke-dasharray=\"6,4\"/>\n  <!-- 直角三角形辅助：水平 50，竖直 60 -->\n  <line x1=\"30\" y1=\"170\" x2=\"180\" y2=\"170\" stroke=\"#4a7dbd\" stroke-width=\"1.5\" stroke-dasharray=\"4,3\"/>\n  <line x1=\"180\" y1=\"170\" x2=\"180\" y2=\"200\" stroke=\"#3d9c63\" stroke-width=\"1.5\" stroke-dasharray=\"4,3\"/>\n  <text x=\"105\" y=\"164\" font-size=\"12\" fill=\"#4a7dbd\" text-anchor=\"middle\" font-weight=\"bold\">水平 80−30 = 50</text>\n  <text x=\"236\" y=\"188\" font-size=\"12\" fill=\"#3d9c63\" text-anchor=\"middle\" font-weight=\"bold\">竖直 50+10 = 60</text>\n  <text x=\"95\" y=\"196\" font-size=\"12\" fill=\"#8e44ad\" font-weight=\"bold\">AG = 最短路程</text>\n</svg>\n    <p>展开之后，最短路程就是线段 <b>AG</b> 的长——用勾股定理，只差找出两条直角边。</p>"
+    },
+    {
+      "kind": "quiz",
+      "tag": "鱼缸题 · 竖直边",
+      "title": "展开图中，A 到 G 的竖直距离 = ?",
+      "prompt": "A 在外侧面底部；从 A 竖直向上到顶棱是缸高 50；从顶棱继续摊下来到 G（G 离缸口 50 − 40 = 10）。",
+      "options": [
+        {
+          "t": "50 + 10 = 60",
+          "ok": true,
+          "why": "对！外侧爬 50 + 内侧下 10 = <b>60</b>。展开后两段竖直路程<strong>接成一条直线</strong>，直接相加。"
+        },
+        {
+          "t": "50",
+          "ok": false,
+          "why": "50 只算到缸口，还没下去到 G 呢。G 在内侧离顶棱还有 10 cm。"
+        },
+        {
+          "t": "40",
+          "ok": false,
+          "why": "40 是水深。G 在水面处，但蚂蚁是从缸底外面的 A 出发翻缸口，跟水深 40 没直接关系——40 是用来算 G 离缸口 50 − 40 = 10 的。"
+        }
+      ]
+    },
+    {
+      "kind": "quiz",
+      "tag": "鱼缸题 · 水平边",
+      "title": "展开图中，A 到 G 的水平距离 = ?",
+      "prompt": "A 在前壁最左边的棱上；G 离右棱 F 有 30 cm。前壁总长 AD = 80。",
+      "options": [
+        {
+          "t": "80 − 30 = 50",
+          "ok": true,
+          "why": "对！A 靠左棱，G 离右棱 30，所以 G 距左棱 80 − 30 = <b>50</b>。"
+        },
+        {
+          "t": "30",
+          "ok": false,
+          "why": "30 是 G 离<strong>右</strong>棱的距离，A 在<strong>左</strong>边，得从总长里减。"
+        },
+        {
+          "t": "80",
+          "ok": false,
+          "why": "80 是整个缸长。G 没有贴到最右端，离右棱还有 30 cm。"
+        }
+      ]
+    },
+    {
+      "kind": "quiz",
+      "tag": "鱼缸题 · 收口",
+      "title": "最短路程的平方 = ?",
+      "prompt": "展开后：水平 50、竖直 60，AG 是斜边。勾股定理走起。",
+      "options": [
+        {
+          "t": "50² + 60² = 2500 + 3600 = 6100",
+          "ok": true,
+          "why": "对！<b>AG² = 50² + 60² = 6100</b>。题目问的就是平方，答案写 6100 就收工，连根号都不用开。"
+        },
+        {
+          "t": "√6100",
+          "ok": false,
+          "why": "√6100 是路程本身。题目问的是「路程的平方」，所以停在 6100 就是最简答案——开根号反而画蛇添足。"
+        },
+        {
+          "t": "80² + 60² = 10000",
+          "ok": false,
+          "why": "水平方向不是 80：G 离右棱 30，没贴到边，水平距离是 80 − 30 = 50。"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "鱼缸题 · 你的展开思路其实是对的",
+      "title": "就差临门一脚",
+      "html": "<img src=\"c0908_kid2.jpg\" style=\"width:100%;max-width:430px;border:1px solid #ddd;border-radius:8px;display:block;margin:8px auto\">\n    <p>你已经做出<strong>最关键的一步</strong>：把 A 对称翻上去（图中 A′）、找到 M 点、标了 50——展开化归的思想是对的！</p>\n    <div class=\"note\">你卡住的地方：翻折后<strong>竖直方向的两段（50 + 10）要接起来算总高 60</strong>，水平方向从 A 的棱到 G 是 80 − 30 = 50，然后 50² + 60² = <b>6100</b>。<br>\n    下次记住口诀：<b>翻棱拍平 → 横竖各找一段 → 勾股一波带走。</b></div>"
+    },
+    {
+      "kind": "summary",
+      "tag": "母套路总结卡 · 三个信号词",
+      "title": "看到这三个词，条件反射",
+      "html": "<div class=\"note\"><b>信号词 1：「动点 P」</b> → 用 t 表示所有线段（BP=t, CP=|t−4|），先把 P 的三种位置分段画出来，再动笔。</div>\n    <div class=\"note\"><b>信号词 2：「当△XX是直角/等腰三角形」</b> → 顶点/腰不确定 = 分类讨论：<br>\n    直角 → 逐个顶点试（固定角先排除）；等腰 → 三边两两配对分三类；每个解都要<strong>检验位置是否合法</strong>（t=0 重合要舍）。</div>\n    <div class=\"note\"><b>信号词 3：「沿表面爬的最短路径」</b> → 展开拍平 → 两点连线 → 横竖各找一段 → 勾股。<br>\n    竖直距离 = 翻上去的 + 下去的；水平距离用总长减去剩下的。</div>\n    <p><b>今天的成绩单：</b></p>\n    <ul>\n      <li>✅ 第(1)问 BC = 4（你已做对）</li>\n      <li>✅ 第(2)问 t = 4 或 t = 25/4（2 个解）</li>\n      <li>✅ 第(3)问 t = 25/8、5、8（3 个解，舍 1 个）</li>\n      <li>✅ 鱼缸题 最短路程² = 6100</li>\n    </ul>\n    <p><b>今晚任务：</b>做右侧练习卷 4 道同类题（都是今天模型的换数字版），做完拍照发我。</p>"
+    }
+  ]
+};
+window.COURSE = COURSE;
+
+
+/* ===================== 渲染引擎（一般不用改） ===================== */
+const stage = document.getElementById('stage');
+document.getElementById('courseTitle').textContent = COURSE.title;
+document.getElementById('courseSub').textContent = COURSE.subtitle;
+const bar = document.getElementById('bar');
+let cur = 0;
+
+function scrollTop(){
+  const el = document.querySelector('.wrap');
+  if (el && el.scrollIntoView) { try{ el.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){} }
+}
+
+function render(i){
+  cur = i;
+  const total = COURSE.steps.length;
+  bar.style.width = Math.round((i)/(total-1)*100) + '%';
+  stage.innerHTML = '';
+  const s = COURSE.steps[i];
+  const card = document.createElement('div');
+  card.className = 'step active';
+  let inner = '';
+  if (s.tag) inner += `<span class="tag">${s.tag}</span>`;
+  inner += `<h2>${s.title}</h2>`;
+  if (s.kind === 'quiz'){
+    inner += `<p>${s.prompt}</p><div class="opts" id="opts"></div><div class="fb" id="fb"></div>`;
+  } else {
+    inner += s.html || '';
+  }
+  // 导航按钮
+  const isLast = (i === total-1);
+  inner += `<div class="nav">`;
+  inner += i>0 ? `<button class="btn btn-back" id="back">← 上一步</button>` : `<span></span>`;
+  if (!isLast){
+    inner += `<button class="btn btn-next" id="next">下一步 →</button>`;
+  } else if (s.kind !== 'summary'){
+    inner += `<button class="btn btn-next" id="next">完成 ✓</button>`;
+  } else {
+    inner += `<span></span>`;
+  }
+  inner += `</div>`;
+  card.innerHTML = inner;
+  stage.appendChild(card);
+
+  if (s.kind === 'quiz') buildQuiz(s, card);
+  // 绑定导航
+  const nextBtn = card.querySelector('#next');
+  if (nextBtn){
+    if (s.kind === 'quiz'){ nextBtn.disabled = true; } // 答题后才解锁
+    nextBtn.addEventListener('click', ()=>{ if(!nextBtn.disabled) render(i+1); });
+  }
+  const backBtn = card.querySelector('#back');
+  if (backBtn) backBtn.addEventListener('click', ()=> render(i-1));
+  scrollTop();
+}
+
+function buildQuiz(s, card){
+  const optsBox = card.querySelector('#opts');
+  const fb = card.querySelector('#fb');
+  const nextBtn = card.querySelector('#next');
+  s.options.forEach((o, idx)=>{
+    const div = document.createElement('div');
+    div.className = 'opt';
+    div.innerHTML = `<span class="mk">${String.fromCharCode(65+idx)}</span><span>${o.t}</span>`;
+    div.addEventListener('click', ()=>{
+      // 锁定所有选项（避免重复点）
+      optsBox.querySelectorAll('.opt').forEach(el=>{ el.classList.add('locked'); });
+      // 先启用"下一步"（关键：绝不被反馈 handler 卡住）
+      if (nextBtn) nextBtn.disabled = false;
+      // 标出对错
+      div.classList.add(o.ok ? 'correct' : 'wrong', 'chosen');
+      if (!o.ok){
+        // 顺便高亮正确答案，让学生看到正解
+        optsBox.querySelectorAll('.opt').forEach((el,k)=>{ if(s.options[k].ok) el.classList.add('correct'); });
+      }
+      // 揭示评语（try/catch 兜底）
+      try{
+        fb.className = 'fb show ' + (o.ok ? 'ok' : 'bad');
+        fb.innerHTML = (o.ok ? '✅ <b>答对了：</b>' : '⚠️ <b>再看一眼：</b>') + o.why;
+      }catch(e){ /* 反馈出错也不影响下一步 */ }
+      scrollTop();
+    });
+    optsBox.appendChild(div);
+  });
+}
+
+render(0);
+</script>
+</body>
+</html>
