@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>苏格拉底互动特训课</title>
+<!--
+  =====================================================================
+  初中数学 · 苏格拉底互动特训课 模板（math-socratic-trainer 技能资产）
+  ---------------------------------------------------------------------
+  怎么用：复制本文件，只改下面的 COURSE 对象即可，不要从零写 HTML。
+
+  已修复的已知坑（详见技能 SKILL.md Pitfalls）：
+    ✅ 原生 CSS，不用 Tailwind @apply
+    ✅ 选项绝不预显示"对/接近/反了"——评语只在点击后揭示
+    ✅ 不用 window['check'+id] 拼函数名，改用数据驱动 + 闭包绑定
+    ✅ 不用 split('-') 解析 dash（旧坑：c1-1 → NaN → 下一步死锁）
+       本模板用"步骤索引"驱动，根本不存在 dash 解析
+    ✅ checkQuiz：先启用"下一步"，再 try/catch 显示反馈——
+       反馈 handler 报错也绝不会卡住下一步
+    ✅ scrollIntoView 带 if 防御（部分 webview 缺该方法）
+  几何/题干图：用 PDF 真实截图 base64 嵌入 <img>，严禁手绘 SVG。
+  =====================================================================
+-->
+<style>
+  :root{
+    --bg:#f6f7fb; --card:#ffffff; --ink:#1f2430; --sub:#5b6472;
+    --line:#e6e9f0; --accent:#4f6ef7; --accent-soft:#eef1fe;
+    --ok:#1f9d6b; --ok-soft:#e7f7ef; --bad:#e0533d; --bad-soft:#fdecea;
+    --warn:#b7791f; --radius:16px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.7;padding:18px}
+  .wrap{max-width:760px;margin:0 auto}
+  .head{background:linear-gradient(135deg,#4f6ef7,#7b5cf0);color:#fff;
+    border-radius:var(--radius);padding:22px 24px;margin-bottom:16px;
+    box-shadow:0 8px 24px rgba(79,110,247,.25)}
+  .head h1{font-size:21px;letter-spacing:.5px}
+  .head p{opacity:.92;margin-top:6px;font-size:14px}
+  .progress{height:8px;background:rgba(255,255,255,.35);border-radius:99px;
+    margin-top:14px;overflow:hidden}
+  .progress>i{display:block;height:100%;width:0;background:#fff;
+    border-radius:99px;transition:width .3s}
+  .step{display:none;background:var(--card);border:1px solid var(--line);
+    border-radius:var(--radius);padding:22px 22px 18px;margin-bottom:14px;
+    box-shadow:0 4px 16px rgba(31,36,48,.05)}
+  .step.active{display:block;animation:fade .35s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .tag{display:inline-block;font-size:12px;font-weight:700;color:var(--accent);
+    background:var(--accent-soft);padding:3px 10px;border-radius:99px;margin-bottom:10px}
+  .step h2{font-size:18px;margin-bottom:12px}
+  .step p,.step li{font-size:15.5px;color:var(--ink)}
+  .step p{margin:8px 0}
+  .step ul,.step ol{margin:8px 0 8px 22px}
+  .step li{margin:5px 0}
+  .note{background:var(--accent-soft);border-left:4px solid var(--accent);
+    padding:10px 14px;border-radius:10px;margin:12px 0;font-size:14.5px;color:#2b3550}
+  .imgbox{margin:14px 0;text-align:center}
+  .imgbox img{max-width:100%;border:1px solid var(--line);border-radius:12px;background:#fff}
+  .opts{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+  .opt{display:flex;align-items:flex-start;gap:10px;cursor:pointer;
+    border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;
+    font-size:15px;transition:.15s;background:#fff}
+  .opt:hover{border-color:var(--accent);background:var(--accent-soft)}
+  .opt .mk{flex:0 0 22px;height:22px;border-radius:50%;border:1.5px solid #c4cad6;
+    display:flex;align-items:center;justify-content:center;font-size:13px;color:#8a93a3;font-weight:700}
+  .opt.chosen{border-color:var(--accent)}
+  .opt.correct{border-color:var(--ok);background:var(--ok-soft)}
+  .opt.wrong{border-color:var(--bad);background:var(--bad-soft)}
+  .opt.locked{cursor:default;pointer-events:none}
+  .fb{margin-top:14px;padding:12px 14px;border-radius:12px;font-size:14.5px;
+    display:none}
+  .fb.show{display:block;animation:fade .3s}
+  .fb.ok{background:var(--ok-soft);border:1px solid #bfe9d3;color:#146b48}
+  .fb.bad{background:var(--bad-soft);border:1px solid #f6c9c0;color:#8f2f20}
+  .fb b{color:inherit}
+  .nav{display:flex;justify-content:space-between;gap:10px;margin-top:18px}
+  .btn{border:none;border-radius:12px;padding:12px 20px;font-size:15px;
+    font-weight:700;cursor:pointer;transition:.15s}
+  .btn-next{background:var(--accent);color:#fff;flex:1}
+  .btn-next:hover{background:#3f5ce8}
+  .btn-next:disabled{background:#c8cee0;color:#fff;cursor:not-allowed}
+  .btn-back{background:#fff;color:var(--sub);border:1.5px solid var(--line)}
+  .btn-back:hover{border-color:var(--accent);color:var(--accent)}
+  .done{text-align:center;padding:8px 0 4px;color:var(--ok);font-weight:700}
+  .foot{text-align:center;color:var(--sub);font-size:12.5px;margin:8px 0 28px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <h1 id="courseTitle">互动特训课</h1>
+    <p id="courseSub">跟着问题一步步想，别急着看答案</p>
+    <div class="progress"><i id="bar"></i></div>
+  </div>
+  <div id="stage"></div>
+  <div class="foot">讲人话 · 一步步来 · 你一定能看懂</div>
+</div>
+
+<script>
+/* =====================================================================
+   只改这里：COURSE 对象
+   - steps 是一道题拆成的若干引导环节
+   - kind: "read" 讲解/读题 | "quiz" 选择题 | "summary" 母套路小结卡
+   - quiz 的 options: {t:选项文字, ok:是否正确答案, why:点击后才显示的讲解}
+   - why 里可以放 <b> 等简单 HTML
+   ===================================================================== */
+var COURSE = {
+  "meta": {
+    "title": "旋转法 + 勾股分割点 · 15 分钟专项",
+    "date": "2026-09-08"
+  },
+  "steps": [
+    {
+      "kind": "read",
+      "tag": "s0",
+      "title": "今天补两个大坑（15 分钟）",
+      "html": "<p>昨天「能力诊断」页里，有两处空着或做错的题，暴露了<b>两个必须堵住的坑</b>：</p><p>🔴 <b>坑一（第3题）</b>：你写 PA²+PB²=PC²——差了一个「2」。</p><img src=\"b0908_q3.jpg\" style=\"width:100%;max-width:430px;border:1px solid #ddd;border-radius:8px;display:block;margin:8px auto\"><p>🔴 <b>坑二（第5题）</b>：勾股分割点，第(2)问空白——答案其实有<b>两个</b>。</p><p>这两个坑背后是<b>同一个母套路</b>：分类讨论 + 构造。15 分钟，一个一个拆。</p>"
+    },
+    {
+      "kind": "quiz",
+      "tag": "a1",
+      "title": "热身：用数字戳穿错误答案",
+      "prompt": "抽象的字母不可靠，我们取一组具体数字来检验。取 C=(0,0)，A=(−10,10)，B=(10,10)（此时 ∠ACB=90°，AC=BC，是等腰直角三角形），P=(−3,10)（在斜边 AB 上）。<br><br>算一算：PA=7，PB=13，PC²=0²+3²... 等等，PC²=(−3−0)²+(10−0)²=9+100=109。<br><br>那么按你的答案 PA²+PB²=PC²，左边=7²+13²=49+169=218，右边=109。<br><br>218 ≠ 109，说明什么？",
+      "options": [
+        {
+          "t": "题目太特殊，换个例子就对了",
+          "ok": false,
+          "why": "不对。数值检验已经否定了一个具体例子，猜想本身就错了——不是例子的问题。"
+        },
+        {
+          "t": "关系式错了，真正的关系应该在 PC² 前面乘一个系数",
+          "ok": true,
+          "why": "对！218 = 2×109，正确的猜想是 PA²+PB² = 2PC²。记住这个手感：字母推理没把握时，取特例数值先验一验，错得快、改得也快。"
+        },
+        {
+          "t": "P 点位置取错了",
+          "ok": false,
+          "why": "P=(−3,10) 确实在 AB 上（y 都是 10，x 在 −10 到 10 之间），位置没问题。"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "a2",
+      "title": "正确答案：PA²+PB² = 2PC²，那个「2」从哪来？",
+      "html": "<p>正确的关系是 <b style='color:#c0392b'>PA² + PB² = 2PC²</b>。</p><p>现在的问题是：<b>这个「2」不是凭空冒出来的</b>。它有两个来源：</p><p>① <b>等腰直角三角形斜边² = 2×直角边²</b>（斜边 = √2×直角边，平方后就有 2）</p><p>② 一次<b>旋转</b>，把分散的三条线段装进同一个直角三角形。</p><p>题目里「以 PC 为直角边作等腰直角三角形 PCQ」这句看似多此一举的话，其实就是出题人把旋转法<b>替你做了一半</b>。下面看懂另一半。</p>"
+    },
+    {
+      "kind": "quiz",
+      "tag": "a3",
+      "title": "为什么非要作一个 △PCQ 出来？",
+      "prompt": "PA 在左上，PB 在右上，PC 在中间——三条线段分散在三个地方。勾股定理有一条铁律：<b>必须两边在同一个三角形里</b>才能用。<br><br>那么作等腰直角 △PCQ 的真正目的是什么？",
+      "options": [
+        {
+          "t": "让图看起来更丰富",
+          "ok": false,
+          "why": "中考图形的每一笔都有用途，『好看』从来不是理由。"
+        },
+        {
+          "t": "把分散的线段集中到同一个三角形里",
+          "ok": true,
+          "why": "对！旋转后 PA 会「搬」到 BQ 的位置，和 PB 拼进同一个 △PBQ 里。这就是构造辅助线的核心动机：分散 → 集中。"
+        },
+        {
+          "t": "为了多算一个三角形的面积",
+          "ok": false,
+          "why": "这道题根本不涉及面积。"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "a4",
+      "title": "旋转法图解：△ACP 绕 C 转 90° 变成 △BCQ",
+      "html": "<p>看图：把 <b>△ACP 绕点 C 顺时针旋转 90°</b>，A 落到 B，P 落到 Q——这个 Q 正是题目所作的等腰直角三角形顶点。</p>\n<svg viewBox=\"0 0 360 300\" style=\"width:100%;max-width:430px;background:#fff;border:1px solid #ddd;border-radius:8px\">\n  <!-- 三角形 ABC（淡蓝底） -->\n  <polygon points=\"65,145 275,145 170,250\" fill=\"#eef5ff\" stroke=\"none\"/>\n  <!-- 旋转后的对应区域 BCQ（淡绿底） -->\n  <polygon points=\"275,145 170,250 275,218.5\" fill=\"#eaf7ef\" stroke=\"none\" opacity=\"0.85\"/>\n  <!-- 主线 -->\n  <line x1=\"65\" y1=\"145\" x2=\"275\" y2=\"145\" stroke=\"#4a7dbd\" stroke-width=\"2\"/>\n  <line x1=\"65\" y1=\"145\" x2=\"170\" y2=\"250\" stroke=\"#4a7dbd\" stroke-width=\"2\"/>\n  <line x1=\"275\" y1=\"145\" x2=\"170\" y2=\"250\" stroke=\"#4a7dbd\" stroke-width=\"2\"/>\n  <!-- CP 与 CQ（所作等腰直角三角形 PCQ） -->\n  <line x1=\"170\" y1=\"250\" x2=\"138.5\" y2=\"145\" stroke=\"#3d9c63\" stroke-width=\"2.2\"/>\n  <line x1=\"170\" y1=\"250\" x2=\"275\" y2=\"218.5\" stroke=\"#3d9c63\" stroke-width=\"2.2\"/>\n  <!-- BQ（=PA 旋转过来的）与 PQ -->\n  <line x1=\"275\" y1=\"145\" x2=\"275\" y2=\"218.5\" stroke=\"#c0392b\" stroke-width=\"2.6\"/>\n  <line x1=\"138.5\" y1=\"145\" x2=\"275\" y2=\"218.5\" stroke=\"#c0392b\" stroke-width=\"1.8\" stroke-dasharray=\"6 4\"/>\n  <!-- C 处 ∠ACB=90° 直角标记 -->\n  <path d=\"M 161.5 241.5 L 187 233 L 178.5 241.5\" fill=\"none\" stroke=\"#889\" stroke-width=\"1.4\"/>\n  <!-- B 处 ∠PBQ=90° 直角标记 -->\n  <path d=\"M 263 145 L 263 157 L 275 157\" fill=\"none\" stroke=\"#c0392b\" stroke-width=\"1.4\"/>\n  <!-- 旋转弧：C 为圆心 r=90，CA 方向到 CB 方向 -->\n  <defs><marker id=\"arw\" markerWidth=\"8\" markerHeight=\"8\" refX=\"6\" refY=\"3\" orient=\"auto\"><path d=\"M0,0 L7,3 L0,6 Z\" fill=\"#e67e22\"/></marker></defs>\n  <path d=\"M 106.4 186.4 A 90 90 0 0 1 233.6 186.4\" fill=\"none\" stroke=\"#e67e22\" stroke-width=\"2\" marker-end=\"url(#arw)\"/>\n  <text x=\"170\" y=\"128\" font-size=\"12\" fill=\"#e67e22\" text-anchor=\"middle\" font-weight=\"bold\">绕 C 旋转 90°</text>\n  <!-- 点 -->\n  <circle cx=\"65\" cy=\"145\" r=\"4\" fill=\"#2c3e50\"/>\n  <circle cx=\"275\" cy=\"145\" r=\"4\" fill=\"#2c3e50\"/>\n  <circle cx=\"170\" cy=\"250\" r=\"4\" fill=\"#2c3e50\"/>\n  <circle cx=\"138.5\" cy=\"145\" r=\"4.5\" fill=\"#c0392b\"/>\n  <circle cx=\"275\" cy=\"218.5\" r=\"4.5\" fill=\"#3d9c63\"/>\n  <!-- 标签 -->\n  <text x=\"52\" y=\"140\" font-size=\"14\" fill=\"#2c3e50\" font-weight=\"bold\">A</text>\n  <text x=\"283\" y=\"140\" font-size=\"14\" fill=\"#2c3e50\" font-weight=\"bold\">B</text>\n  <text x=\"164\" y=\"271\" font-size=\"14\" fill=\"#2c3e50\" font-weight=\"bold\">C</text>\n  <text x=\"130\" y=\"134\" font-size=\"14\" fill=\"#c0392b\" font-weight=\"bold\">P</text>\n  <text x=\"284\" y=\"226\" font-size=\"14\" fill=\"#3d9c63\" font-weight=\"bold\">Q</text>\n  <text x=\"94\" y=\"136\" font-size=\"11.5\" fill=\"#4a7dbd\">PA=7</text>\n  <text x=\"196\" y=\"136\" font-size=\"11.5\" fill=\"#4a7dbd\">PB=13</text>\n  <text x=\"281\" y=\"186\" font-size=\"11.5\" fill=\"#c0392b\">BQ=PA</text>\n  <text x=\"96\" y=\"205\" font-size=\"11.5\" fill=\"#3d9c63\">CP=CQ</text>\n  <text x=\"188\" y=\"196\" font-size=\"11.5\" fill=\"#c0392b\" transform=\"rotate(28 204 182)\">PQ（斜边）</text>\n  <text x=\"230\" y=\"243\" font-size=\"11\" fill=\"#666\">∠ACB=∠PCQ=90°</text>\n</svg><p>为什么能转过去（全等）？三条证据：</p><p>① CA = CB（原三角形等腰直角，两腰相等）</p><p>② CP = CQ（所作等腰直角 △PCQ 的两直角边）</p><p>③ <b>∠ACP = ∠BCQ</b>（都等于 90° − ∠PCB：∠ACP 是 ∠ACB 去掉 ∠PCB，∠BCQ 是 ∠PCQ 去掉 ∠PCB）</p><p>两边及其夹角对应相等 → <b style='color:#c0392b'>SAS 全等</b>。所以 PA = BQ，P 搬家成功！</p>"
+    },
+    {
+      "kind": "quiz",
+      "tag": "a5",
+      "title": "关键一步：∠PBQ 是多少度？",
+      "prompt": "全等之后，对应角也相等：∠CBQ = ∠CAP。<br><br>提示：△ABC 是等腰直角三角形，两个底角 ∠A = ∠B = 45°。<br><br>那么 ∠PBQ = ∠PBC + ∠CBQ = ？",
+      "options": [
+        {
+          "t": "45°",
+          "ok": false,
+          "why": "∠PBC 本身就是 45° 了，再加 ∠CBQ 呢？"
+        },
+        {
+          "t": "90°",
+          "ok": true,
+          "why": "对！∠PBC = 45°（等腰直角底角），∠CBQ = ∠CAP = 45°（全等对应角），加起来 ∠PBQ = 90°。<br><br>这一步是旋转法的灵魂：转完之后，PB 和 BQ 恰好拼成一个<b>直角</b>。"
+        },
+        {
+          "t": "60°",
+          "ok": false,
+          "why": "60° 一般来自等边三角形旋转 60° 的场景，这里 45°+45° 才是主角。"
+        }
+      ]
+    },
+    {
+      "kind": "quiz",
+      "tag": "a6",
+      "title": "收获时刻：△PBQ 里用一次勾股",
+      "prompt": "∠PBQ = 90°，所以在 △PBQ 中：PB² + BQ² = PQ²。<br><br>现在把 BQ 换成 PA（全等），再看右边 PQ——它是等腰直角 △PCQ 的<b>斜边</b>。<br><br>那么 PQ² = ？",
+      "options": [
+        {
+          "t": "PQ² = PC²",
+          "ok": false,
+          "why": "差一点！想想等腰直角三角形：斜边 = √2 × 直角边，平方之后系数是几？"
+        },
+        {
+          "t": "PQ² = PC² + CQ² = 2PC²",
+          "ok": true,
+          "why": "对！PQ 是斜边，两直角边 PC = CQ，所以 PQ² = PC² + CQ² = 2PC²。<br><b>「2」在这里正式登场</b>——这就是它的出生地。"
+        },
+        {
+          "t": "PQ² = PC²/2",
+          "ok": false,
+          "why": "反了，斜边的平方只会比直角边的平方大。"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "a7",
+      "title": "串起整条推理链",
+      "html": "<p>把三块积木拼起来：</p><p style='background:#fff8ec;border:2px solid #e67e22;border-radius:10px;padding:12px 16px;font-size:16px;line-height:2'>PA² + PB² = PB² + BQ²　（全等 → PA = BQ）<br>＝ PQ²　　　　　　　（∠PBQ = 90°，勾股）<br>＝ PC² + CQ² = <b style='color:#c0392b'>2PC²</b>　（△PCQ 等腰直角）</p><p>代回刚才的特例检验：PA²+PB² = 218，2PC² = 2×109 = 218 ✓ 完美吻合。</p><p><b>错因复盘</b>：原来写 PA²+PB²=PC²，是因为看到「平方和」就条件反射套勾股。以后见到三条线段的平方关系，先问自己一句：<b>它们在同一个直角三角形里吗？谁被旋转搬运过？系数 2 出现了吗？</b></p>"
+    },
+    {
+      "kind": "summary",
+      "tag": "a8",
+      "title": "母套路卡片：旋转法",
+      "html": "<p><b>什么时候用旋转法？</b></p><p>✅ 等腰三角形（尤其等腰直角）＋ 顶点处散落着几条不相邻的线段</p><p><b>怎么转？</b></p><p>🔹 等腰直角 → 绕顶点转 <b>90°</b>；等边 → 转 <b>60°</b>（转到另一条腰上）</p><p>🔹 全等由 SAS 保证：两腰本来相等，旋转角相等（同角加减）</p><p>🔹 转完三件事：搬线段（PA=BQ）、拼直角（45°+45°=90°）、斜边再勾股（冒出系数 2）</p><p><b>口诀：等腰转一转，分散变集中。</b></p>"
+    },
+    {
+      "kind": "read",
+      "tag": "b1",
+      "title": "新定义题：纸老虎拆解法",
+      "html": "<p>第 5 题开头一段陌生定义，很多同学直接吓退。<b>新定义题的秘诀：把名词翻译成学过的话。</b></p><img src=\"b0908_q5.jpg\" style=\"width:100%;max-width:430px;border:1px solid #ddd;border-radius:8px;display:block;margin:8px auto\"><p>「勾股分割点」翻译过来就一句：</p><p style='background:#eef5ff;border:2px solid #2c6fbb;border-radius:10px;padding:10px 14px'>点 M、N 把 AB 切成三段 AM、MN、NB，<b>这三段的长度恰好能作为一个直角三角形的三条边</b>。</p><p>注意一个细节：定义只说「是一个直角三角形」，<b>没规定谁是斜边</b>——这五个字就是第(2)问的伏笔。</p>"
+    },
+    {
+      "kind": "quiz",
+      "tag": "b2",
+      "title": "第(1)问热身：1.5、2.5、2 算不算？",
+      "prompt": "AM = 1.5，MN = 2.5，BN = 2。检验是不是勾股分割点，就是检验 1.5²、2.5²、2² 这三个数：<br><br>1.5² = 2.25，2² = 4，2.5² = 6.25。<br><br>2.25 + 4 = 6.25 ✓<br><br>结论是？",
+      "options": [
+        {
+          "t": "是勾股分割点，斜边是 MN",
+          "ok": true,
+          "why": "对！两条短边 1.5、2 的平方和 = 最长边 2.5 的平方，构成直角三角形，最长边 MN 是斜边。这就是 1.5-2-2.5（3-4-5 的一半）勾股数。"
+        },
+        {
+          "t": "不是，因为三段不相等",
+          "ok": false,
+          "why": "直角三角形三边本来就不必相等，判定标准只有勾股定理。"
+        },
+        {
+          "t": "是勾股分割点，斜边是 AM",
+          "ok": false,
+          "why": "斜边必须是最长边，AM = 1.5 最短，不可能当斜边。"
+        }
+      ]
+    },
+    {
+      "kind": "quiz",
+      "tag": "b3",
+      "title": "第(2)问题眼：斜边有几种可能？",
+      "prompt": "第(2)问：M、N 是勾股分割点，<b>AM 为直角边</b>，AB = 24，AM = 6，求 BN。<br><br>第一步先设元：MN + NB = 24 − 6 = 18。设 MN = x，NB = y，则 x + y = 18。<br><br>关键思考：条件说「AM 为直角边」，意思是 AM <b>不当斜边</b>。那么剩下的两条边里，斜边可能是谁？",
+      "options": [
+        {
+          "t": "只有一种：斜边是 MN",
+          "ok": false,
+          "why": "题目只排除了 AM 当斜边，MN 和 NB 谁长谁短并不知道——这正是要分类的地方。"
+        },
+        {
+          "t": "两种可能：斜边是 MN，或者斜边是 NB",
+          "ok": true,
+          "why": "对！AM 被固定为直角边后，直角三角形还剩两条边，斜边二选一。<br>「斜边不确定 → 分类讨论」——和第 13 题「直角顶点不确定」是同一个母套路。"
+        },
+        {
+          "t": "斜边是 AM，因为题目提到了它",
+          "ok": false,
+          "why": "恰恰相反，「AM 为直角边」这句就是在排除它当斜边。"
+        }
+      ]
+    },
+    {
+      "kind": "quiz",
+      "tag": "b4",
+      "title": "情形一：斜边是 MN",
+      "prompt": "斜边 = MN，即 x² = 6² + y²，也就是 x² − y² = 36。<br><br>配合 x + y = 18，用平方差公式：x² − y² = (x + y)(x − y) = 18(x − y) = 36，<br><br>所以 x − y = 2。解方程组 x + y = 18，x − y = 2，得？",
+      "options": [
+        {
+          "t": "x = 10，y = 8，即 BN = 8",
+          "ok": true,
+          "why": "对！x = 10，y = 8，检验：6² + 8² = 36 + 64 = 100 = 10² ✓，且 6 + 8 + 10 = 24 ✓。BN = 8。"
+        },
+        {
+          "t": "x = 8，y = 10，即 BN = 10",
+          "ok": false,
+          "why": "注意：这一类里 x = MN 是斜边，必须最长。x = 10、y = 8 才满足 x − y = 2。"
+        },
+        {
+          "t": "无解",
+          "ok": false,
+          "why": "平方差一用方程就解开了，是整数解，检查一下加减方向。"
+        }
+      ]
+    },
+    {
+      "kind": "quiz",
+      "tag": "b5",
+      "title": "情形二：斜边是 NB",
+      "prompt": "斜边 = NB，即 y² = 6² + x²，也就是 y² − x² = 36。<br><br>同样用平方差：(y + x)(y − x) = 18(y − x) = 36，得 y − x = 2。<br><br>解 x + y = 18，y − x = 2，得？",
+      "options": [
+        {
+          "t": "BN = 8",
+          "ok": false,
+          "why": "这一类斜边是 y = NB，y 必须最长。算出来 y = 10 才对。"
+        },
+        {
+          "t": "BN = 10",
+          "ok": true,
+          "why": "对！y = 10，x = 8，检验：6² + 8² = 100 = 10² ✓，6 + 8 + 10 = 24 ✓。BN = 10。<br><br>有趣：两解其实都是 6、8、10 这组勾股数，只是 6-8-10 里谁当斜边不同。"
+        },
+        {
+          "t": "BN = 12",
+          "ok": false,
+          "why": "BN 最大也就 18 − x，x 还是正数，代回去验一下勾股。"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "b6",
+      "title": "双解合璧：BN = 8 或 10",
+      "html": "<p>两个情形都检验通过，<b>答案必须写全：BN = 8 或 10</b>。漏掉任何一个，12 分的解答题直接腰斩。</p>\n<svg viewBox=\"0 0 360 132\" style=\"width:100%;max-width:430px;background:#fff;border:1px solid #ddd;border-radius:8px\">\n  <text x=\"20\" y=\"26\" font-size=\"12.5\" fill=\"#c0392b\" font-weight=\"bold\">解① 斜边 = MN：BN = 8</text>\n  <line x1=\"40\" y1=\"40\" x2=\"110\" y2=\"40\" stroke=\"#2c6fbb\" stroke-width=\"5\"/>\n  <line x1=\"110\" y1=\"40\" x2=\"203.3\" y2=\"40\" stroke=\"#c0392b\" stroke-width=\"5\"/>\n  <line x1=\"203.3\" y1=\"40\" x2=\"320\" y2=\"40\" stroke=\"#e67e22\" stroke-width=\"5\"/>\n  <circle cx=\"40\" cy=\"40\" r=\"3.5\" fill=\"#2c3e50\"/><circle cx=\"110\" cy=\"40\" r=\"3.5\" fill=\"#2c3e50\"/>\n  <circle cx=\"203.3\" cy=\"40\" r=\"3.5\" fill=\"#2c3e50\"/><circle cx=\"320\" cy=\"40\" r=\"3.5\" fill=\"#2c3e50\"/>\n  <text x=\"40\" y=\"58\" font-size=\"12\" fill=\"#2c3e50\" text-anchor=\"middle\">A</text>\n  <text x=\"110\" y=\"58\" font-size=\"12\" fill=\"#2c3e50\" text-anchor=\"middle\">M</text>\n  <text x=\"203\" y=\"58\" font-size=\"12\" fill=\"#2c3e50\" text-anchor=\"middle\">N</text>\n  <text x=\"320\" y=\"58\" font-size=\"12\" fill=\"#2c3e50\" text-anchor=\"middle\">B</text>\n  <text x=\"75\" y=\"33\" font-size=\"11\" fill=\"#2c6fbb\" text-anchor=\"middle\">6</text>\n  <text x=\"157\" y=\"33\" font-size=\"11\" fill=\"#c0392b\" text-anchor=\"middle\">8</text>\n  <text x=\"262\" y=\"33\" font-size=\"11\" fill=\"#e67e22\" text-anchor=\"middle\">10</text>\n  <line x1=\"110\" y1=\"46\" x2=\"203.3\" y2=\"46\" stroke=\"#c0392b\" stroke-width=\"1\" opacity=\"0\"/>\n  <text x=\"20\" y=\"88\" font-size=\"12.5\" fill=\"#e67e22\" font-weight=\"bold\">解② 斜边 = NB：BN = 10</text>\n  <line x1=\"40\" y1=\"102\" x2=\"110\" y2=\"102\" stroke=\"#2c6fbb\" stroke-width=\"5\"/>\n  <line x1=\"110\" y1=\"102\" x2=\"226.7\" y2=\"102\" stroke=\"#c0392b\" stroke-width=\"5\"/>\n  <line x1=\"226.7\" y1=\"102\" x2=\"320\" y2=\"102\" stroke=\"#e67e22\" stroke-width=\"5\"/>\n  <circle cx=\"40\" cy=\"102\" r=\"3.5\" fill=\"#2c3e50\"/><circle cx=\"110\" cy=\"102\" r=\"3.5\" fill=\"#2c3e50\"/>\n  <circle cx=\"226.7\" cy=\"102\" r=\"3.5\" fill=\"#2c3e50\"/><circle cx=\"320\" cy=\"102\" r=\"3.5\" fill=\"#2c3e50\"/>\n  <text x=\"40\" y=\"120\" font-size=\"12\" fill=\"#2c3e50\" text-anchor=\"middle\">A</text>\n  <text x=\"110\" y=\"120\" font-size=\"12\" fill=\"#2c3e50\" text-anchor=\"middle\">M</text>\n  <text x=\"227\" y=\"120\" font-size=\"12\" fill=\"#2c3e50\" text-anchor=\"middle\">N</text>\n  <text x=\"320\" y=\"120\" font-size=\"12\" fill=\"#2c3e50\" text-anchor=\"middle\">B</text>\n  <text x=\"75\" y=\"95\" font-size=\"11\" fill=\"#2c6fbb\" text-anchor=\"middle\">6</text>\n  <text x=\"168\" y=\"95\" font-size=\"11\" fill=\"#c0392b\" text-anchor=\"middle\">10</text>\n  <text x=\"273\" y=\"95\" font-size=\"11\" fill=\"#e67e22\" text-anchor=\"middle\">8</text>\n</svg><p>检验习惯（分类讨论的收尾动作，每次必做）：</p><p>① 勾股成立？6²+8²=10² ✓　② 三段和 = AB？6+8+10 = 24 ✓　③ M、N 在线段上（长度为正）？✓</p><p>两个解居然都活在同一条线段上，只是 N 的位置不同——图里看得清清楚楚。</p>"
+    },
+    {
+      "kind": "summary",
+      "tag": "s15",
+      "title": "总结：今天收获的三件兵器",
+      "html": "<p><b>① 特例检验法</b>：字母关系没把握 → 代入好算的特例数字，错的当场现形（第3题 218 ≠ 109）。</p><p><b>② 旋转法</b>：等腰直角＋分散线段 → 绕顶点转 90° → SAS 全等搬线段 → 拼出直角 → 斜边再勾股 → <b>2PC²</b>。口诀「等腰转一转，分散变集中」。</p><p><b>③ 新定义+双解</b>：陌生名词翻译成勾股定理；「斜边不确定」→ 分类 → 平方差解方程组 → <b>每个解都要检验</b> → 答案写「或」。</p><p style='background:#eef5ff;border-radius:10px;padding:10px 14px'>📌 三道题（第13题、第3题、第5题）连起来看：<b>分类讨论的开关</b>就是你的命门。开关打开了，145+ 才有门。</p><p>✍️ 做完主课，去练 <b>rp0908.html</b>（3 道换数字练习），写完拍照发我。</p>"
+    }
+  ]
+};
+window.COURSE = COURSE;
+
+
+/* ===================== 渲染引擎（一般不用改） ===================== */
+const stage = document.getElementById('stage');
+document.getElementById('courseTitle').textContent = COURSE.title;
+document.getElementById('courseSub').textContent = COURSE.subtitle;
+const bar = document.getElementById('bar');
+let cur = 0;
+
+function scrollTop(){
+  const el = document.querySelector('.wrap');
+  if (el && el.scrollIntoView) { try{ el.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){} }
+}
+
+function render(i){
+  cur = i;
+  const total = COURSE.steps.length;
+  bar.style.width = Math.round((i)/(total-1)*100) + '%';
+  stage.innerHTML = '';
+  const s = COURSE.steps[i];
+  const card = document.createElement('div');
+  card.className = 'step active';
+  let inner = '';
+  if (s.tag) inner += `<span class="tag">${s.tag}</span>`;
+  inner += `<h2>${s.title}</h2>`;
+  if (s.kind === 'quiz'){
+    inner += `<p>${s.prompt}</p><div class="opts" id="opts"></div><div class="fb" id="fb"></div>`;
+  } else {
+    inner += s.html || '';
+  }
+  // 导航按钮
+  const isLast = (i === total-1);
+  inner += `<div class="nav">`;
+  inner += i>0 ? `<button class="btn btn-back" id="back">← 上一步</button>` : `<span></span>`;
+  if (!isLast){
+    inner += `<button class="btn btn-next" id="next">下一步 →</button>`;
+  } else if (s.kind !== 'summary'){
+    inner += `<button class="btn btn-next" id="next">完成 ✓</button>`;
+  } else {
+    inner += `<span></span>`;
+  }
+  inner += `</div>`;
+  card.innerHTML = inner;
+  stage.appendChild(card);
+
+  if (s.kind === 'quiz') buildQuiz(s, card);
+  // 绑定导航
+  const nextBtn = card.querySelector('#next');
+  if (nextBtn){
+    if (s.kind === 'quiz'){ nextBtn.disabled = true; } // 答题后才解锁
+    nextBtn.addEventListener('click', ()=>{ if(!nextBtn.disabled) render(i+1); });
+  }
+  const backBtn = card.querySelector('#back');
+  if (backBtn) backBtn.addEventListener('click', ()=> render(i-1));
+  scrollTop();
+}
+
+function buildQuiz(s, card){
+  const optsBox = card.querySelector('#opts');
+  const fb = card.querySelector('#fb');
+  const nextBtn = card.querySelector('#next');
+  s.options.forEach((o, idx)=>{
+    const div = document.createElement('div');
+    div.className = 'opt';
+    div.innerHTML = `<span class="mk">${String.fromCharCode(65+idx)}</span><span>${o.t}</span>`;
+    div.addEventListener('click', ()=>{
+      // 锁定所有选项（避免重复点）
+      optsBox.querySelectorAll('.opt').forEach(el=>{ el.classList.add('locked'); });
+      // 先启用"下一步"（关键：绝不被反馈 handler 卡住）
+      if (nextBtn) nextBtn.disabled = false;
+      // 标出对错
+      div.classList.add(o.ok ? 'correct' : 'wrong', 'chosen');
+      if (!o.ok){
+        // 顺便高亮正确答案，让学生看到正解
+        optsBox.querySelectorAll('.opt').forEach((el,k)=>{ if(s.options[k].ok) el.classList.add('correct'); });
+      }
+      // 揭示评语（try/catch 兜底）
+      try{
+        fb.className = 'fb show ' + (o.ok ? 'ok' : 'bad');
+        fb.innerHTML = (o.ok ? '✅ <b>答对了：</b>' : '⚠️ <b>再看一眼：</b>') + o.why;
+      }catch(e){ /* 反馈出错也不影响下一步 */ }
+      scrollTop();
+    });
+    optsBox.appendChild(div);
+  });
+}
+
+render(0);
+</script>
+</body>
+</html>
