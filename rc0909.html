@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>苏格拉底互动特训课</title>
+<!--
+  =====================================================================
+  初中数学 · 苏格拉底互动特训课 模板（math-socratic-trainer 技能资产）
+  ---------------------------------------------------------------------
+  怎么用：复制本文件，只改下面的 COURSE 对象即可，不要从零写 HTML。
+
+  已修复的已知坑（详见技能 SKILL.md Pitfalls）：
+    ✅ 原生 CSS，不用 Tailwind @apply
+    ✅ 选项绝不预显示"对/接近/反了"——评语只在点击后揭示
+    ✅ 不用 window['check'+id] 拼函数名，改用数据驱动 + 闭包绑定
+    ✅ 不用 split('-') 解析 dash（旧坑：c1-1 → NaN → 下一步死锁）
+       本模板用"步骤索引"驱动，根本不存在 dash 解析
+    ✅ checkQuiz：先启用"下一步"，再 try/catch 显示反馈——
+       反馈 handler 报错也绝不会卡住下一步
+    ✅ scrollIntoView 带 if 防御（部分 webview 缺该方法）
+  几何/题干图：用 PDF 真实截图 base64 嵌入 <img>，严禁手绘 SVG。
+  =====================================================================
+-->
+<style>
+  :root{
+    --bg:#f6f7fb; --card:#ffffff; --ink:#1f2430; --sub:#5b6472;
+    --line:#e6e9f0; --accent:#4f6ef7; --accent-soft:#eef1fe;
+    --ok:#1f9d6b; --ok-soft:#e7f7ef; --bad:#e0533d; --bad-soft:#fdecea;
+    --warn:#b7791f; --radius:16px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.7;padding:18px}
+  .wrap{max-width:760px;margin:0 auto}
+  .head{background:linear-gradient(135deg,#4f6ef7,#7b5cf0);color:#fff;
+    border-radius:var(--radius);padding:22px 24px;margin-bottom:16px;
+    box-shadow:0 8px 24px rgba(79,110,247,.25)}
+  .head h1{font-size:21px;letter-spacing:.5px}
+  .head p{opacity:.92;margin-top:6px;font-size:14px}
+  .progress{height:8px;background:rgba(255,255,255,.35);border-radius:99px;
+    margin-top:14px;overflow:hidden}
+  .progress>i{display:block;height:100%;width:0;background:#fff;
+    border-radius:99px;transition:width .3s}
+  .step{display:none;background:var(--card);border:1px solid var(--line);
+    border-radius:var(--radius);padding:22px 22px 18px;margin-bottom:14px;
+    box-shadow:0 4px 16px rgba(31,36,48,.05)}
+  .step.active{display:block;animation:fade .35s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .tag{display:inline-block;font-size:12px;font-weight:700;color:var(--accent);
+    background:var(--accent-soft);padding:3px 10px;border-radius:99px;margin-bottom:10px}
+  .step h2{font-size:18px;margin-bottom:12px}
+  .step p,.step li{font-size:15.5px;color:var(--ink)}
+  .step p{margin:8px 0}
+  .step ul,.step ol{margin:8px 0 8px 22px}
+  .step li{margin:5px 0}
+  .note{background:var(--accent-soft);border-left:4px solid var(--accent);
+    padding:10px 14px;border-radius:10px;margin:12px 0;font-size:14.5px;color:#2b3550}
+  .imgbox{margin:14px 0;text-align:center}
+  .imgbox img{max-width:100%;border:1px solid var(--line);border-radius:12px;background:#fff}
+  .opts{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+  .opt{display:flex;align-items:flex-start;gap:10px;cursor:pointer;
+    border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;
+    font-size:15px;transition:.15s;background:#fff}
+  .opt:hover{border-color:var(--accent);background:var(--accent-soft)}
+  .opt .mk{flex:0 0 22px;height:22px;border-radius:50%;border:1.5px solid #c4cad6;
+    display:flex;align-items:center;justify-content:center;font-size:13px;color:#8a93a3;font-weight:700}
+  .opt.chosen{border-color:var(--accent)}
+  .opt.correct{border-color:var(--ok);background:var(--ok-soft)}
+  .opt.wrong{border-color:var(--bad);background:var(--bad-soft)}
+  .opt.locked{cursor:default;pointer-events:none}
+  .fb{margin-top:14px;padding:12px 14px;border-radius:12px;font-size:14.5px;
+    display:none}
+  .fb.show{display:block;animation:fade .3s}
+  .fb.ok{background:var(--ok-soft);border:1px solid #bfe9d3;color:#146b48}
+  .fb.bad{background:var(--bad-soft);border:1px solid #f6c9c0;color:#8f2f20}
+  .fb b{color:inherit}
+  .nav{display:flex;justify-content:space-between;gap:10px;margin-top:18px}
+  .btn{border:none;border-radius:12px;padding:12px 20px;font-size:15px;
+    font-weight:700;cursor:pointer;transition:.15s}
+  .btn-next{background:var(--accent);color:#fff;flex:1}
+  .btn-next:hover{background:#3f5ce8}
+  .btn-next:disabled{background:#c8cee0;color:#fff;cursor:not-allowed}
+  .btn-back{background:#fff;color:var(--sub);border:1.5px solid var(--line)}
+  .btn-back:hover{border-color:var(--accent);color:var(--accent)}
+  .done{text-align:center;padding:8px 0 4px;color:var(--ok);font-weight:700}
+  .foot{text-align:center;color:var(--sub);font-size:12.5px;margin:8px 0 28px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <h1 id="courseTitle">互动特训课</h1>
+    <p id="courseSub">跟着问题一步步想，别急着看答案</p>
+    <div class="progress"><i id="bar"></i></div>
+  </div>
+  <div id="stage"></div>
+  <div class="foot">讲人话 · 一步步来 · 你一定能看懂</div>
+</div>
+
+<script>
+/* =====================================================================
+   只改这里：COURSE 对象
+   - steps 是一道题拆成的若干引导环节
+   - kind: "read" 讲解/读题 | "quiz" 选择题 | "summary" 母套路小结卡
+   - quiz 的 options: {t:选项文字, ok:是否正确答案, why:点击后才显示的讲解}
+   - why 里可以放 <b> 等简单 HTML
+   ===================================================================== */
+var COURSE = {
+  "meta": {
+    "title": "C组13题 · 等边旋转法特训",
+    "date": "2026-09-09"
+  },
+  "steps": [
+    {
+      "kind": "read",
+      "tag": "s0",
+      "title": "C组13题：一题两问，一招旋转",
+      "html": "<p>昨天的 C 组第 13 题——等边三角形里的旋转法大题。先看你自己的作答：</p><img src=\"d0909_kid13.jpg\" style=\"width:100%;max-width:400px;border:1px solid #ddd;border-radius:8px;display:block;margin:8px auto\"><p><b>诊断结果：</b></p><p>🟢 <b>13(2) 旋转思路完全正确</b>——旋转 △AQC、逆时针 60°、连接 QQ′，方向和对象都没错，答案 13 也是对的。</p><p>🔴 <b>但过程跳步被扣分</b>：你直接写了 Q′B=√(12²+5²)=13——<b>勾股定理用之前，「直角」必须先证明出来</b>，图上看出来的角一分不值。</p><p>⚪ <b>13(1) 只标了图没写过程</b>——P′ 和 10 标对了，但解答空着。今天两问一起彻底解决。</p><img src=\"d0909_q13.jpg\" style=\"width:100%;max-width:430px;border:1px solid #ddd;border-radius:8px;display:block;margin:8px auto\">"
+    },
+    {
+      "kind": "quiz",
+      "tag": "a1",
+      "title": "第一步：全等能搬出什么？",
+      "prompt": "13(1)：P 是等边 △ABC 内一点，PA=6，PB=8，PC=10。P′ 在外，<b>△P′AB ≌ △PAC</b>（对应点：P′↔P，A↔A，B↔C）。<br><br>全等就是「复制粘贴」：对应边相等、对应角相等。从这个全等你能直接搬出哪些等量关系？",
+      "options": [
+        {
+          "t": "P′A=PA=6，P′B=PC=10，∠P′AB=∠PAC",
+          "ok": true,
+          "why": "对！三对对应边、三对对应角全部可以搬。特别盯住 P′B=PC=10——待会儿它要挑大梁。"
+        },
+        {
+          "t": "只能搬出 P′A=PA=6",
+          "ok": false,
+          "why": "全等的每一对对应边、对应角都相等，一个都不能少搬。"
+        },
+        {
+          "t": "P′B=PB=8",
+          "ok": false,
+          "why": "对应关系错位了：P′B 的对应边是 PC（P′↔P，B↔C），所以 P′B=PC=10，不是 8。"
+        }
+      ]
+    },
+    {
+      "kind": "quiz",
+      "tag": "a2",
+      "title": "第二步：60° 从哪冒出来？",
+      "prompt": "求 PP′。<br><br>关键拼图：∠P′AP = ∠P′AB + ∠BAP。而 ∠P′AB = ∠PAC（全等对应角），代入：<br><br>∠P′AP = ∠PAC + ∠BAP = ∠BAC = 60°（等边三角形顶角！）。<br><br>现在看 △APP′：AP = AP′ = 6，夹角 ∠PAP′ = 60°。它是什么三角形？PP′ 等于多少？",
+      "options": [
+        {
+          "t": "等边三角形，PP′ = 6",
+          "ok": true,
+          "why": "对！有一个角是 60° 的等腰三角形就是等边三角形（三个角都 60°）。所以 PP′ = AP = 6——第一问到手！"
+        },
+        {
+          "t": "等腰直角三角形，PP′ = 6√2",
+          "ok": false,
+          "why": "60° 不是 90°，等腰直角需要一个 90° 的顶角。这里三个角都是 60°。"
+        },
+        {
+          "t": "一般等腰三角形，PP′ 算不出来",
+          "ok": false,
+          "why": "能算：顶角 60° 的等腰三角形三边必相等，这是等边三角形的判定定理。"
+        }
+      ]
+    },
+    {
+      "kind": "quiz",
+      "tag": "a3",
+      "title": "第三步：6、8、10 凑一起了！",
+      "prompt": "第二问求 ∠APB。看 △PP′B 的三条边：<br><br>PP′ = 6（刚证的），PB = 8（已知），P′B = 10（第一步全等搬来的）。<br><br>6² + 8² = 36 + 64 = 100 = 10²。<br><br>勾股<b>逆定理</b>出手：△PP′B 是直角三角形！请问 90° 的角是哪一个？",
+      "options": [
+        {
+          "t": "∠P′PB——直角对着最长边 10",
+          "ok": true,
+          "why": "对！勾股逆定理：最大边的对角是直角。P′B=10 最长，它对的角 ∠P′PB = 90°。"
+        },
+        {
+          "t": "∠PP′B",
+          "ok": false,
+          "why": "∠PP′B 对着的边是 PB=8，不是最长边。直角永远对着斜边（最长边）。"
+        },
+        {
+          "t": "∠PBP′",
+          "ok": false,
+          "why": "∠PBP′ 对着 PP′=6，最短的边，它只能是最小的锐角。"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "a4",
+      "title": "收网：∠APB = 60° + 90° = 150°",
+      "html": "<p>看图收网：</p>\n<svg viewBox=\"0 0 320 290\" style=\"width:100%;max-width:430px;background:#fff;border:1px solid #ddd;border-radius:8px\">\n  <polygon points=\"60,250 161.5,74.2 263,250\" fill=\"#eef5ff\" stroke=\"none\"/>\n  <polygon points=\"126,188.8 40,162.2 60,250\" fill=\"#fff8ec\" stroke=\"none\" opacity=\"0.9\"/>\n  <polygon points=\"126,188.8 40,162.2 161.5,74.2\" fill=\"#fdeeee\" stroke=\"none\" opacity=\"0.75\"/>\n  <line x1=\"40\" y1=\"162.2\" x2=\"161.5\" y2=\"74.2\" stroke=\"#c0392b\" stroke-width=\"2.6\"/>\n  <line x1=\"40\" y1=\"162.2\" x2=\"126\" y2=\"188.8\" stroke=\"#c0392b\" stroke-width=\"2.6\"/>\n  <line x1=\"60\" y1=\"250\" x2=\"161.5\" y2=\"74.2\" stroke=\"#4a7dbd\" stroke-width=\"2\"/>\n  <line x1=\"161.5\" y1=\"74.2\" x2=\"263\" y2=\"250\" stroke=\"#4a7dbd\" stroke-width=\"2\"/>\n  <line x1=\"263\" y1=\"250\" x2=\"60\" y2=\"250\" stroke=\"#4a7dbd\" stroke-width=\"2\"/>\n  <line x1=\"60\" y1=\"250\" x2=\"126\" y2=\"188.8\" stroke=\"#3d9c63\" stroke-width=\"2.2\"/>\n  <line x1=\"60\" y1=\"250\" x2=\"40\" y2=\"162.2\" stroke=\"#3d9c63\" stroke-width=\"2.2\"/>\n  <line x1=\"126\" y1=\"188.8\" x2=\"263\" y2=\"250\" stroke=\"#e67e22\" stroke-width=\"1.8\"/>\n  <line x1=\"126\" y1=\"188.8\" x2=\"161.5\" y2=\"74.2\" stroke=\"#e67e22\" stroke-width=\"1.8\"/>\n  <path d=\"M 116.4 185.8 L 119.4 176.3 L 129 179.3\" fill=\"none\" stroke=\"#c0392b\" stroke-width=\"1.4\"/>\n  <defs><marker id=\"arw1\" markerWidth=\"8\" markerHeight=\"8\" refX=\"6\" refY=\"3\" orient=\"auto\"><path d=\"M0,0 L7,3 L0,6 Z\" fill=\"#e67e22\"/></marker></defs>\n  <path d=\"M 110 250 A 50 50 0 0 0 85 206.7\" fill=\"none\" stroke=\"#e67e22\" stroke-width=\"2\" marker-end=\"url(#arw1)\"/>\n  <circle cx=\"60\" cy=\"250\" r=\"4\" fill=\"#2c3e50\"/><circle cx=\"161.5\" cy=\"74.2\" r=\"4\" fill=\"#2c3e50\"/>\n  <circle cx=\"263\" cy=\"250\" r=\"4\" fill=\"#2c3e50\"/><circle cx=\"126\" cy=\"188.8\" r=\"4.5\" fill=\"#c0392b\"/>\n  <circle cx=\"40\" cy=\"162.2\" r=\"4.5\" fill=\"#3d9c63\"/>\n  <text x=\"46\" y=\"266\" font-size=\"14\" fill=\"#2c3e50\" font-weight=\"bold\">A</text>\n  <text x=\"156\" y=\"64\" font-size=\"14\" fill=\"#2c3e50\" font-weight=\"bold\">B</text>\n  <text x=\"268\" y=\"266\" font-size=\"14\" fill=\"#2c3e50\" font-weight=\"bold\">C</text>\n  <text x=\"132\" y=\"204\" font-size=\"14\" fill=\"#c0392b\" font-weight=\"bold\">P</text>\n  <text x=\"20\" y=\"158\" font-size=\"14\" fill=\"#3d9c63\" font-weight=\"bold\">P′</text>\n  <text x=\"92\" y=\"234\" font-size=\"11.5\" fill=\"#3d9c63\">PA=6</text>\n  <text x=\"150\" y=\"128\" font-size=\"11.5\" fill=\"#e67e22\">PB=8</text>\n  <text x=\"186\" y=\"240\" font-size=\"11.5\" fill=\"#e67e22\">PC=10</text>\n  <text x=\"92\" y=\"112\" font-size=\"11.5\" fill=\"#c0392b\">P′B=PC=10</text>\n  <text x=\"44\" y=\"172\" font-size=\"11.5\" fill=\"#c0392b\">PP′=6</text>\n  <text x=\"84\" y=\"202\" font-size=\"11.5\" fill=\"#b8860b\">60°</text>\n  <text x=\"126\" y=\"172\" font-size=\"11.5\" fill=\"#c0392b\">90°</text>\n  <text x=\"66\" y=\"226\" font-size=\"11\" fill=\"#e67e22\">旋转 60°</text>\n</svg><p>射线 PP′ 恰好落在 ∠APB <b>内部</b>（P′ 在 PA 与 PB 之间），所以：</p><p style='background:#fff8ec;border:2px solid #e67e22;border-radius:10px;padding:12px 16px;font-size:16px;line-height:2'>PP′ = 6（等边 △APP′）<br>∠APB = ∠APP′ + ∠P′PB = <b>60° + 90° = 150°</b></p><p><b>回头看一眼</b>：等边三角形的边长其实被 PA、PB、PC 三个距离唯一确定（约 13.5），但题目从头到尾<b>不需要求它</b>——旋转法只管搬线段、凑三角形，边长自己不出现。这就是旋转法的威力。</p><p>另外注意：题目把 △P′AB≌△PAC <b>直接告诉你</b>了——这个全等就是「替你做好的旋转」：把 △PAC 绕 A 转 60°，C 落到 B，P 落到 P′。</p>"
+    },
+    {
+      "kind": "summary",
+      "tag": "a5",
+      "title": "13(1) 三步拳",
+      "html": "<p><b>① 全等搬边</b>：P′A=PA=6、P′B=PC=10（全等=复制粘贴）</p><p><b>② 等边定角</b>：∠P′AP=∠BAC=60° + AP=AP′ → 等边 → PP′=6，∠APP′=60°</p><p><b>③ 勾股逆定理</b>：6²+8²=10² → ∠P′PB=90°（直角对最长边）</p><p>→ <b>PP′=6，∠APB=60°+90°=150°</b></p><p style='background:#eef5ff;border-radius:10px;padding:10px 14px'>💡 记住：题目给全等 = 替你做好的旋转。下一问就要你自己当了。</p>"
+    },
+    {
+      "kind": "quiz",
+      "tag": "b1",
+      "title": "你的旋转没错！缺的是哪一块？",
+      "prompt": "13(2)：Q 在等边 △ABC 内，QA=5，QB=12，∠AQB=150°，求 CQ。<br><br>你的解答第一步：<b>将 △AQC 绕 A 逆时针旋转 60°，C→B，Q→Q′，连接 QQ′</b>——对象、方向、角度全对！旋转不变性给出：<br><br>△AQ′B ≌ △AQC → <b>Q′B = QC</b>（把待求的 QC 搬到了 B 旁边），AQ′ = AQ = 5。<br><br>然后你直接写了 Q′B=√(12²+5²)=13。要用勾股定理，中间必须先证明什么？",
+      "options": [
+        {
+          "t": "证明 △BQQ′ 是直角三角形——直角在哪、为什么是直角",
+          "ok": true,
+          "why": "对！勾股定理的前提是「直角三角形」。12 和 5 能当直角边用，前提是 ∠BQQ′=90° 成立且被写出来。这就是被扣的那几分。"
+        },
+        {
+          "t": "证明 B、Q、Q′ 三点共线",
+          "ok": false,
+          "why": "恰恰相反——三点<b>不能</b>共线，不共线才能围成三角形，勾股才有舞台。"
+        },
+        {
+          "t": "不用证明，图上看出来是直角",
+          "ok": false,
+          "why": "「看图猜角」在解答题里零分。每个角都要有来历：要么计算，要么定理。"
+        }
+      ]
+    },
+    {
+      "kind": "quiz",
+      "tag": "b2",
+      "title": "补洞一：△AQQ′ 是什么三角形？",
+      "prompt": "旋转把 AQ 转到了 AQ′，所以 AQ′ = AQ = 5，且旋转角 ∠QAQ′ = 60°。<br><br>在 △AQQ′ 中：AQ = AQ′（等腰），顶角 ∠QAQ′ = 60°。<br><br>结论是什么？",
+      "options": [
+        {
+          "t": "等边三角形：QQ′ = 5，∠AQQ′ = ∠AQ′Q = 60°",
+          "ok": true,
+          "why": "对！等腰 + 60° 顶角 → 等边。于是 QQ′=5（这个 5 就是待会儿勾股的第二条直角边），∠AQQ′=60°（待会儿要用它算大角）。"
+        },
+        {
+          "t": "等腰直角三角形",
+          "ok": false,
+          "why": "顶角是 60° 不是 90°，直角从哪来？"
+        },
+        {
+          "t": "三边 3、4、5 的直角三角形",
+          "ok": false,
+          "why": "3-4-5 需要三条边分别是 3、4、5，这里两条边都是 5。"
+        }
+      ]
+    },
+    {
+      "kind": "quiz",
+      "tag": "b3",
+      "title": "补洞二：∠BQQ′ 是多少度？（丢分就在这一步）",
+      "prompt": "现在 △BQQ′ 里：QB = 12（已知），QQ′ = 5（刚证的）。<br><br>第三个角的来历：QQ′ 这条射线是从 QA <b>转 60°</b> 出去的，且转进了 ∠BQA 的内部。所以：<br><br>∠BQQ′ = ∠BQA − ∠AQQ′ = 150° − 60° = ？",
+      "options": [
+        {
+          "t": "90°",
+          "ok": true,
+          "why": "对！<b>150° − 60° = 90°</b>。这一行就是被扣的分！那个 150° 的大角是这道题的灵魂——它减去旋转角 60°，直角就诞生了。"
+        },
+        {
+          "t": "60°",
+          "ok": false,
+          "why": "60° 是 ∠AQQ′（等边三角形的内角），别忘了还要从 150° 里去减它。"
+        },
+        {
+          "t": "150°",
+          "ok": false,
+          "why": "150° 是 ∠AQB 本身。QQ′ 在它内部占掉了 60°，剩 90°。"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "b4",
+      "title": "补全后的满分解答（对照你的跳步版）",
+      "html": "<p>看图对答案：</p>\n<svg viewBox=\"0 0 360 300\" style=\"width:100%;max-width:430px;background:#fff;border:1px solid #ddd;border-radius:8px\">\n  <polygon points=\"90,250 213.9,35.4 337.8,250\" fill=\"#eef5ff\" stroke=\"none\"/>\n  <polygon points=\"90,250 148.5,203.1 78.7,175.9\" fill=\"#eaf7ef\" stroke=\"none\" opacity=\"0.9\"/>\n  <line x1=\"90\" y1=\"250\" x2=\"213.9\" y2=\"35.4\" stroke=\"#4a7dbd\" stroke-width=\"2\"/>\n  <line x1=\"213.9\" y1=\"35.4\" x2=\"337.8\" y2=\"250\" stroke=\"#4a7dbd\" stroke-width=\"2\"/>\n  <line x1=\"337.8\" y1=\"250\" x2=\"90\" y2=\"250\" stroke=\"#4a7dbd\" stroke-width=\"2\"/>\n  <line x1=\"90\" y1=\"250\" x2=\"148.5\" y2=\"203.1\" stroke=\"#3d9c63\" stroke-width=\"2.2\"/>\n  <line x1=\"90\" y1=\"250\" x2=\"78.7\" y2=\"175.9\" stroke=\"#3d9c63\" stroke-width=\"2.2\"/>\n  <line x1=\"148.5\" y1=\"203.1\" x2=\"78.7\" y2=\"175.9\" stroke=\"#3d9c63\" stroke-width=\"2.2\"/>\n  <line x1=\"148.5\" y1=\"203.1\" x2=\"213.9\" y2=\"35.4\" stroke=\"#e67e22\" stroke-width=\"2.2\"/>\n  <line x1=\"78.7\" y1=\"175.9\" x2=\"213.9\" y2=\"35.4\" stroke=\"#c0392b\" stroke-width=\"2.8\"/>\n  <path d=\"M 152.1 193.8 L 142.8 190.2 L 139.2 199.5\" fill=\"none\" stroke=\"#c0392b\" stroke-width=\"1.4\"/>\n  <defs><marker id=\"arw2\" markerWidth=\"8\" markerHeight=\"8\" refX=\"6\" refY=\"3\" orient=\"auto\"><path d=\"M0,0 L7,3 L0,6 Z\" fill=\"#e67e22\"/></marker></defs>\n  <path d=\"M 145 250 A 55 55 0 0 0 117.5 202.4\" fill=\"none\" stroke=\"#e67e22\" stroke-width=\"2\" marker-end=\"url(#arw2)\"/>\n  <line x1=\"121.8\" y1=\"219.7\" x2=\"116.8\" y2=\"213.5\" stroke=\"#3d9c63\" stroke-width=\"1.6\"/>\n  <line x1=\"88.4\" y1=\"202.4\" x2=\"80.4\" y2=\"203.6\" stroke=\"#3d9c63\" stroke-width=\"1.6\"/>\n  <line x1=\"115.1\" y1=\"175.8\" x2=\"112.1\" y2=\"183.2\" stroke=\"#3d9c63\" stroke-width=\"1.6\"/>\n  <circle cx=\"90\" cy=\"250\" r=\"4\" fill=\"#2c3e50\"/><circle cx=\"213.9\" cy=\"35.4\" r=\"4\" fill=\"#2c3e50\"/>\n  <circle cx=\"337.8\" cy=\"250\" r=\"4\" fill=\"#2c3e50\"/><circle cx=\"148.5\" cy=\"203.1\" r=\"4.5\" fill=\"#c0392b\"/>\n  <circle cx=\"78.7\" cy=\"175.9\" r=\"4.5\" fill=\"#3d9c63\"/>\n  <text x=\"78\" y=\"266\" font-size=\"14\" fill=\"#2c3e50\" font-weight=\"bold\">A</text>\n  <text x=\"208\" y=\"30\" font-size=\"14\" fill=\"#2c3e50\" font-weight=\"bold\">B</text>\n  <text x=\"330\" y=\"268\" font-size=\"14\" fill=\"#2c3e50\" font-weight=\"bold\">C</text>\n  <text x=\"154\" y=\"212\" font-size=\"14\" fill=\"#c0392b\" font-weight=\"bold\">Q</text>\n  <text x=\"58\" y=\"172\" font-size=\"14\" fill=\"#3d9c63\" font-weight=\"bold\">Q′</text>\n  <text x=\"126\" y=\"238\" font-size=\"11.5\" fill=\"#3d9c63\">QA=5</text>\n  <text x=\"186\" y=\"128\" font-size=\"11.5\" fill=\"#e67e22\">QB=12</text>\n  <text x=\"96\" y=\"228\" font-size=\"11.5\" fill=\"#b8860b\">60°</text>\n  <text x=\"120\" y=\"228\" font-size=\"11\" fill=\"#8a8a8a\">150°</text>\n  <text x=\"168\" y=\"185\" font-size=\"11.5\" fill=\"#c0392b\">90°</text>\n  <text x=\"156\" y=\"106\" font-size=\"12\" fill=\"#c0392b\" font-weight=\"bold\">Q′B=13</text>\n  <text x=\"96\" y=\"160\" font-size=\"11.5\" fill=\"#3d9c63\">QQ′=5</text>\n  <text x=\"64\" y=\"244\" font-size=\"11\" fill=\"#e67e22\">旋转 60°</text>\n</svg><p style='background:#f4f9f4;border:2px solid #3d9c63;border-radius:10px;padding:12px 16px;font-size:15px;line-height:2'><b>① 旋转</b>：将 △AQC 绕 A 逆时针旋转 60°（C→B），Q→Q′，连接 QQ′<br><b>② 全等</b>：△AQ′B≌△AQC → Q′B=QC，AQ′=AQ=5<br><b>③ 等边</b>：∠QAQ′=60°（旋转角）+ AQ=AQ′ → △AQQ′ 等边 → QQ′=5，∠AQQ′=60°<br><b>④ 直角</b>：∠BQQ′=∠BQA−∠AQQ′=<b>150°−60°=90°</b><br><b>⑤ 勾股</b>：Q′B²=QB²+QQ′²=12²+5²=169 → Q′B=13<br><b>⑥ 搬回</b>：QC=Q′B=<b>13</b></p><p>你的版本只有 ①②⑤⑥，缺的 ③④ 恰好是「直角从哪来」的完整论证。<b>数字一样，分不一样</b>——中考按步骤给分，跳一步丢一步。</p>"
+    },
+    {
+      "kind": "read",
+      "tag": "b5",
+      "title": "另一条路 + 共同的心脏",
+      "html": "<p>其实还能转另一个三角形——把含 150° 角的 △AQB 绕 A <b>顺时针</b>转 60°（B→C，Q→Q″）：</p><p>🔹 Q″C = QB = 12（全等搬运）<br>🔹 △AQQ″ 等边 → QQ″=5，∠AQ″Q=60°<br>🔹 ∠CQ″Q = ∠AQB − ∠AQ″Q = 150° − 60° = <b>90°</b><br>🔹 QC = √(12²+5²) = 13 ✓ 殊途同归</p><p style='background:#fff8ec;border:2px solid #e67e22;border-radius:10px;padding:10px 14px'>🔥 <b>两条路的共同心脏：150° − 60° = 90°</b>。旋转只是搬运工，把 150° 的大角搬到能减 60° 的位置，直角一出生，勾股立刻收工。6-8-10 和 5-12-13 都是它的观众。</p>"
+    },
+    {
+      "kind": "summary",
+      "tag": "s9",
+      "title": "总结：等边旋转法一页通",
+      "html": "<p><b>13(1) 与 13(2) 对照（同一套路的两面）：</b></p><table style='width:100%;border-collapse:collapse;font-size:13.5px'><tr style='background:#eef5ff'><th style='border:1px solid #ccd;padding:6px'></th><th style='border:1px solid #ccd;padding:6px'>13(1)</th><th style='border:1px solid #ccd;padding:6px'>13(2)</th></tr><tr><td style='border:1px solid #ccd;padding:6px'>旋转谁来做</td><td style='border:1px solid #ccd;padding:6px'>题目给全等（替你转好）</td><td style='border:1px solid #ccd;padding:6px'>自己转 60°</td></tr><tr><td style='border:1px solid #ccd;padding:6px'>直角怎么来</td><td style='border:1px solid #ccd;padding:6px'>勾股<b>逆定理</b>（6-8-10）</td><td style='border:1px solid #ccd;padding:6px'>角度<b>运算</b>（150°−60°）</td></tr><tr><td style='border:1px solid #ccd;padding:6px'>勾股收尾</td><td style='border:1px solid #ccd;padding:6px'>∠APB=60°+90°=150°</td><td style='border:1px solid #ccd;padding:6px'>QC=√(12²+5²)=13</td></tr></table><p><b>三句话带走：</b></p><p>① 全等/旋转是<b>搬运工</b>：把分散的线段搬进同一个三角形。</p><p>② 直角必须<b>证出来</b>：逆定理（算平方）或角度运算（大角减旋转角），二选一，写出来。</p><p>③ 勾股<b>收尾</b>：等边三角形里转 60°，150°−60°=90° 是高频组合。</p><p style='background:#eef5ff;border-radius:10px;padding:10px 14px'>✍️ 做完去练 <b>rp0909.html</b>（3 题），写完拍照发我。重点检查：直角那一步写了没有！</p>"
+    }
+  ]
+};
+window.COURSE = COURSE;
+
+
+/* ===================== 渲染引擎（一般不用改） ===================== */
+const stage = document.getElementById('stage');
+document.getElementById('courseTitle').textContent = COURSE.title;
+document.getElementById('courseSub').textContent = COURSE.subtitle;
+const bar = document.getElementById('bar');
+let cur = 0;
+
+function scrollTop(){
+  const el = document.querySelector('.wrap');
+  if (el && el.scrollIntoView) { try{ el.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){} }
+}
+
+function render(i){
+  cur = i;
+  const total = COURSE.steps.length;
+  bar.style.width = Math.round((i)/(total-1)*100) + '%';
+  stage.innerHTML = '';
+  const s = COURSE.steps[i];
+  const card = document.createElement('div');
+  card.className = 'step active';
+  let inner = '';
+  if (s.tag) inner += `<span class="tag">${s.tag}</span>`;
+  inner += `<h2>${s.title}</h2>`;
+  if (s.kind === 'quiz'){
+    inner += `<p>${s.prompt}</p><div class="opts" id="opts"></div><div class="fb" id="fb"></div>`;
+  } else {
+    inner += s.html || '';
+  }
+  // 导航按钮
+  const isLast = (i === total-1);
+  inner += `<div class="nav">`;
+  inner += i>0 ? `<button class="btn btn-back" id="back">← 上一步</button>` : `<span></span>`;
+  if (!isLast){
+    inner += `<button class="btn btn-next" id="next">下一步 →</button>`;
+  } else if (s.kind !== 'summary'){
+    inner += `<button class="btn btn-next" id="next">完成 ✓</button>`;
+  } else {
+    inner += `<span></span>`;
+  }
+  inner += `</div>`;
+  card.innerHTML = inner;
+  stage.appendChild(card);
+
+  if (s.kind === 'quiz') buildQuiz(s, card);
+  // 绑定导航
+  const nextBtn = card.querySelector('#next');
+  if (nextBtn){
+    if (s.kind === 'quiz'){ nextBtn.disabled = true; } // 答题后才解锁
+    nextBtn.addEventListener('click', ()=>{ if(!nextBtn.disabled) render(i+1); });
+  }
+  const backBtn = card.querySelector('#back');
+  if (backBtn) backBtn.addEventListener('click', ()=> render(i-1));
+  scrollTop();
+}
+
+function buildQuiz(s, card){
+  const optsBox = card.querySelector('#opts');
+  const fb = card.querySelector('#fb');
+  const nextBtn = card.querySelector('#next');
+  s.options.forEach((o, idx)=>{
+    const div = document.createElement('div');
+    div.className = 'opt';
+    div.innerHTML = `<span class="mk">${String.fromCharCode(65+idx)}</span><span>${o.t}</span>`;
+    div.addEventListener('click', ()=>{
+      // 锁定所有选项（避免重复点）
+      optsBox.querySelectorAll('.opt').forEach(el=>{ el.classList.add('locked'); });
+      // 先启用"下一步"（关键：绝不被反馈 handler 卡住）
+      if (nextBtn) nextBtn.disabled = false;
+      // 标出对错
+      div.classList.add(o.ok ? 'correct' : 'wrong', 'chosen');
+      if (!o.ok){
+        // 顺便高亮正确答案，让学生看到正解
+        optsBox.querySelectorAll('.opt').forEach((el,k)=>{ if(s.options[k].ok) el.classList.add('correct'); });
+      }
+      // 揭示评语（try/catch 兜底）
+      try{
+        fb.className = 'fb show ' + (o.ok ? 'ok' : 'bad');
+        fb.innerHTML = (o.ok ? '✅ <b>答对了：</b>' : '⚠️ <b>再看一眼：</b>') + o.why;
+      }catch(e){ /* 反馈出错也不影响下一步 */ }
+      scrollTop();
+    });
+    optsBox.appendChild(div);
+  });
+}
+
+render(0);
+</script>
+</body>
+</html>
