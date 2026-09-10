@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>苏格拉底互动特训课</title>
+<!--
+  =====================================================================
+  初中数学 · 苏格拉底互动特训课 模板（math-socratic-trainer 技能资产）
+  ---------------------------------------------------------------------
+  怎么用：复制本文件，只改下面的 COURSE 对象即可，不要从零写 HTML。
+
+  已修复的已知坑（详见技能 SKILL.md Pitfalls）：
+    ✅ 原生 CSS，不用 Tailwind @apply
+    ✅ 选项绝不预显示"对/接近/反了"——评语只在点击后揭示
+    ✅ 不用 window['check'+id] 拼函数名，改用数据驱动 + 闭包绑定
+    ✅ 不用 split('-') 解析 dash（旧坑：c1-1 → NaN → 下一步死锁）
+       本模板用"步骤索引"驱动，根本不存在 dash 解析
+    ✅ checkQuiz：先启用"下一步"，再 try/catch 显示反馈——
+       反馈 handler 报错也绝不会卡住下一步
+    ✅ scrollIntoView 带 if 防御（部分 webview 缺该方法）
+  几何/题干图：用 PDF 真实截图 base64 嵌入 <img>，严禁手绘 SVG。
+  =====================================================================
+-->
+<style>
+  :root{
+    --bg:#f6f7fb; --card:#ffffff; --ink:#1f2430; --sub:#5b6472;
+    --line:#e6e9f0; --accent:#4f6ef7; --accent-soft:#eef1fe;
+    --ok:#1f9d6b; --ok-soft:#e7f7ef; --bad:#e0533d; --bad-soft:#fdecea;
+    --warn:#b7791f; --radius:16px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.7;padding:18px}
+  .wrap{max-width:760px;margin:0 auto}
+  .head{background:linear-gradient(135deg,#4f6ef7,#7b5cf0);color:#fff;
+    border-radius:var(--radius);padding:22px 24px;margin-bottom:16px;
+    box-shadow:0 8px 24px rgba(79,110,247,.25)}
+  .head h1{font-size:21px;letter-spacing:.5px}
+  .head p{opacity:.92;margin-top:6px;font-size:14px}
+  .progress{height:8px;background:rgba(255,255,255,.35);border-radius:99px;
+    margin-top:14px;overflow:hidden}
+  .progress>i{display:block;height:100%;width:0;background:#fff;
+    border-radius:99px;transition:width .3s}
+  .step{display:none;background:var(--card);border:1px solid var(--line);
+    border-radius:var(--radius);padding:22px 22px 18px;margin-bottom:14px;
+    box-shadow:0 4px 16px rgba(31,36,48,.05)}
+  .step.active{display:block;animation:fade .35s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .tag{display:inline-block;font-size:12px;font-weight:700;color:var(--accent);
+    background:var(--accent-soft);padding:3px 10px;border-radius:99px;margin-bottom:10px}
+  .step h2{font-size:18px;margin-bottom:12px}
+  .step p,.step li{font-size:15.5px;color:var(--ink)}
+  .step p{margin:8px 0}
+  .step ul,.step ol{margin:8px 0 8px 22px}
+  .step li{margin:5px 0}
+  .note{background:var(--accent-soft);border-left:4px solid var(--accent);
+    padding:10px 14px;border-radius:10px;margin:12px 0;font-size:14.5px;color:#2b3550}
+  .imgbox{margin:14px 0;text-align:center}
+  .imgbox img{max-width:100%;border:1px solid var(--line);border-radius:12px;background:#fff}
+  .opts{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+  .opt{display:flex;align-items:flex-start;gap:10px;cursor:pointer;
+    border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;
+    font-size:15px;transition:.15s;background:#fff}
+  .opt:hover{border-color:var(--accent);background:var(--accent-soft)}
+  .opt .mk{flex:0 0 22px;height:22px;border-radius:50%;border:1.5px solid #c4cad6;
+    display:flex;align-items:center;justify-content:center;font-size:13px;color:#8a93a3;font-weight:700}
+  .opt.chosen{border-color:var(--accent)}
+  .opt.correct{border-color:var(--ok);background:var(--ok-soft)}
+  .opt.wrong{border-color:var(--bad);background:var(--bad-soft)}
+  .opt.locked{cursor:default;pointer-events:none}
+  .fb{margin-top:14px;padding:12px 14px;border-radius:12px;font-size:14.5px;
+    display:none}
+  .fb.show{display:block;animation:fade .3s}
+  .fb.ok{background:var(--ok-soft);border:1px solid #bfe9d3;color:#146b48}
+  .fb.bad{background:var(--bad-soft);border:1px solid #f6c9c0;color:#8f2f20}
+  .fb b{color:inherit}
+  .nav{display:flex;justify-content:space-between;gap:10px;margin-top:18px}
+  .btn{border:none;border-radius:12px;padding:12px 20px;font-size:15px;
+    font-weight:700;cursor:pointer;transition:.15s}
+  .btn-next{background:var(--accent);color:#fff;flex:1}
+  .btn-next:hover{background:#3f5ce8}
+  .btn-next:disabled{background:#c8cee0;color:#fff;cursor:not-allowed}
+  .btn-back{background:#fff;color:var(--sub);border:1.5px solid var(--line)}
+  .btn-back:hover{border-color:var(--accent);color:var(--accent)}
+  .done{text-align:center;padding:8px 0 4px;color:var(--ok);font-weight:700}
+  .foot{text-align:center;color:var(--sub);font-size:12.5px;margin:8px 0 28px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <h1 id="courseTitle">互动特训课</h1>
+    <p id="courseSub">跟着问题一步步想，别急着看答案</p>
+    <div class="progress"><i id="bar"></i></div>
+  </div>
+  <div id="stage"></div>
+  <div class="foot">讲人话 · 一步步来 · 你一定能看懂</div>
+</div>
+
+<script>
+/* =====================================================================
+   只改这里：COURSE 对象
+   - steps 是一道题拆成的若干引导环节
+   - kind: "read" 讲解/读题 | "quiz" 选择题 | "summary" 母套路小结卡
+   - quiz 的 options: {t:选项文字, ok:是否正确答案, why:点击后才显示的讲解}
+   - why 里可以放 <b> 等简单 HTML
+   ===================================================================== */
+var COURSE = {
+  "meta": {
+    "title": "0910 旋转法特训 · 第12题 + 第13题",
+    "date": "2026-09-10"
+  },
+  "steps": [
+    {
+      "kind": "read",
+      "tag": "s0",
+      "title": "两道大题：旋转法的两个战场",
+      "html": "<p>今天两道大题都属于一个家族——<b>旋转法</b>。先看清楚各自的题目：</p><p>🅱️ <b>第12题</b>（等边三角形内一点 O）：旋转后要能挖出 3-4-5 直角三角形</p><img src=\"d0910_q12a.jpg\" style=\"width:100%;max-width:430px;border:1px solid #ddd;border-radius:8px;display:block;margin:8px auto\"><p>🅲 <b>第13题</b>（阅读材料 + 运用 + 提升）：从 3-4-5 到半角模型，再到 120° 的费马点</p><img src=\"d0910_q13a.jpg\" style=\"width:100%;max-width:430px;border:1px solid #ddd;border-radius:8px;display:block;margin:8px auto\"><p><b>你的作答情况</b>：13(1) 图1 上已经把 P′ 和 3、4、5 标出来了——旋转思路有了，就差推导；13(2) 只写了「解:(2)」就停笔；13(3) 空白。今天把三道全打通。</p><p style='color:#888;font-size:13px'>（顺带一提：第10题答案 CD=4——同样是旋转法；第11题若图上 D 是 BC 中点，用中线公式可得 6-8-10，面积 24。这两题有问题随时问我。）</p>"
+    },
+    {
+      "kind": "quiz",
+      "tag": "a1",
+      "title": "第12(1)① 旋转角是多少度？",
+      "prompt": "等边 △ABC 内一点 O，OA=3，OB=4，OC=5。将 △BAO 绕点 B <b>顺时针</b>旋转到 △BCD 处（A 转到 C，O 转到 D）。<br><br>旋转角就是「一条边转到它对应边」所扫过的角。这里 BA 转到了 BC，那么旋转角 = ？",
+      "options": [
+        {
+          "t": "60°",
+          "ok": true,
+          "why": "对！等边三角形 ∠ABC=60°，BA 转到 BC 正好扫过 60°。旋转角永远等于「对应边所在的顶角」。"
+        },
+        {
+          "t": "90°",
+          "ok": false,
+          "why": "90° 是等腰直角三角形的顶角，等边三角形三内角都是 60°。"
+        },
+        {
+          "t": "120°",
+          "ok": false,
+          "why": "120° 是等边三角形外角的度数，旋转角要看图形内部的 ∠ABC。"
+        }
+      ]
+    },
+    {
+      "kind": "quiz",
+      "tag": "a2",
+      "title": "第12(1)② OD 等于多少？",
+      "prompt": "旋转不改变长度：所以 <b>BD=BO=4</b>，而且 OB 转到 BD 扫过的角 = 旋转角 = 60°，即 ∠OBD=60°。<br><br>在 △BOD 中：BO=BD=4，夹角 60°。它是什么三角形？OD=？",
+      "options": [
+        {
+          "t": "等边三角形，OD=4",
+          "ok": true,
+          "why": "对！等腰 + 60° 顶角 = 等边三角形。OD=BO=4。<br><br>请记住这个「副产品」：<b>旋转 60° 会白送一个等边三角形</b>。"
+        },
+        {
+          "t": "等腰直角三角形，OD=4√2",
+          "ok": false,
+          "why": "顶角是 60° 不是 90°，等腰直角需要 90° 顶角。"
+        },
+        {
+          "t": "无法确定",
+          "ok": false,
+          "why": "两边相等 + 夹角 60°，SAS 完全锁定形状：等边三角形。"
+        }
+      ]
+    },
+    {
+      "kind": "quiz",
+      "tag": "a3",
+      "title": "第12(1)③ 关键一步：△ODC 是什么三角形？",
+      "prompt": "求 ∠BDC 之前，先看 △ODC 的三条边：<br><br>OD = 4（刚证的等边三角形）<br>CD = OA = 3（旋转搬过来的：CD 的对应边是 AO）<br>OC = 5（已知）<br><br>3² + 4² = 25 = 5²。这说明 △ODC 是？",
+      "options": [
+        {
+          "t": "直角三角形，∠ODC = 90°",
+          "ok": true,
+          "why": "对！勾股逆定理：3²+4²=5²，且 5 是最长边（斜边 OC），所以它对的角 ∠ODC=90°。<br><br>注意：3-4-5 这个组合不是巧合——旋转法最爱在考题里埋这组勾股数。"
+        },
+        {
+          "t": "锐角三角形",
+          "ok": false,
+          "why": "三边满足勾股定理才是直角。3-4-5 恰好满足，它就是直角三角形。"
+        },
+        {
+          "t": "等边三角形",
+          "ok": false,
+          "why": "三边 3、4、5 各不相等，怎么可能是等边。"
+        }
+      ]
+    },
+    {
+      "kind": "quiz",
+      "tag": "a4",
+      "title": "第12(1)③ 收网：∠BDC = ？",
+      "prompt": "看图：D 点周围被分成了两块：<br><br>一半是等边 △BOD 的内角 <b>∠BDO = 60°</b><br>另一半是直角 <b>∠ODC = 90°</b>（刚证出来的）<br><br>所以 ∠BDC = ∠BDO + ∠ODC = ？",
+      "options": [
+        {
+          "t": "150°",
+          "ok": true,
+          "why": "对！60° + 90° = 150°。<br><br>再回头看一眼全题：旋转角 60° → 等边三角形 → 3-4-5 直角 → 150°。<b>这一条链，正是 13(1) 的同款结构，只是数字换了。</b>"
+        },
+        {
+          "t": "30°",
+          "ok": false,
+          "why": "30° 是 60° 与 90° 的差。图上看，∠BDC 是把两块「拼起来」而不是「挖掉一块」。"
+        },
+        {
+          "t": "90°",
+          "ok": false,
+          "why": "90° 只是其中一块（∠ODC），别忘了再加上等边三角形的 60°。"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "a5",
+      "title": "第12(2) 条件探究：把「结论」倒推成「条件」",
+      "html": "<p>第(2)问换成了等腰直角 △ABC（∠ABC=90°，AB=BC），其他照旧：△BAO 绕 B 顺时针旋转到 △BCD，问 <b>OA、OB、OC 满足什么条件时 ∠ODC=90°</b>。</p><img src=\"d0910_q12b.jpg\" style=\"width:100%;max-width:430px;border:1px solid #ddd;border-radius:8px;display:block;margin:8px auto\"><p><b>第一步：旋转后有什么（和第(1)问一样的两件套）</b></p><p>🔹 旋转角 = ∠ABC = <b>90°</b>；BD = BO，∠OBD = 90° → △BOD 是<b>等腰直角三角形</b> → OD = √2·OB，∠BDO = 45°</p><p>🔹 CD = OA（旋转搬运）</p><p><b>第二步：把「∠ODC=90°」翻译成勾股</b></p><p style='background:#fff8ec;border:2px solid #e67e22;border-radius:10px;padding:12px 16px;line-height:2'>∠ODC = 90° ⇔ △ODC 是直角三角形 ⇔ OC² = OD² + CD²<br>⇔ OC² = (√2·OB)² + OA²<br>⇔ <b style='color:#c0392b'>OA² + 2OB² = OC²</b></p><p><b>第三步：反过来验证</b>——当 OA²+2OB²=OC² 时，△ODC 满足勾股定理（逆定理），∠ODC 必为 90°。所以这就是所求条件，证明写「⇒」和「⇐」各一遍即可。</p>"
+    },
+    {
+      "kind": "summary",
+      "tag": "a6",
+      "title": "第12题母套路：旋转三件套",
+      "html": "<p><b>等腰三角形（等边/等腰直角）里绕顶点旋转，永远先做这三件事：</b></p><p>1️⃣ <b>定旋转角</b>：旋转角 = 顶角（等边 60°、等腰直角 90°）</p><p>2️⃣ <b>找副产品三角形</b>：旋转中心那个顶点 + 原像 + 像 → 旋转 60° 得<b>等边三角形</b>，旋转 90° 得<b>等腰直角三角形</b>（这个三角形专门负责提供 60° 或 45° 的角）</p><p>3️⃣ <b>搬线段凑勾股</b>：对应边相等，把三条分散的线段凑成一个三角形，再看它是不是直角三角形</p><p style='background:#eef5ff;border-radius:10px;padding:10px 14px'>💡 12(1) 的答案链：60° → OD=4 → △ODC 是 3-4-5 → ∠ODC=90° → ∠BDC=60°+90°=150°</p>"
+    },
+    {
+      "kind": "quiz",
+      "tag": "b1",
+      "title": "第13(1) 材料读懂了：三条线段去哪了？",
+      "prompt": "阅读材料给了标准动作：<b>将 △ABP 绕顶点 A 旋转到 △ACP′ 处</b>。想一想：这一转，原来分散的三条线段 PA、PB、PC 分别「搬」到哪里去了？",
+      "options": [
+        {
+          "t": "AP′ = AP = 3；P′C = PB = 4；PC = 5 原地不动",
+          "ok": true,
+          "why": "对！旋转把 △ABP 整个搬到 △ACP′：AP 转成 AP′（长 3）、PB 转成 P′C（长 4），而 PC 本来就是 P 到 C，不动（长 5）。<br><br>现在 3、4、5 三条线段全在 △PP′C 和 △APP′ 附近了。"
+        },
+        {
+          "t": "AP′=PB=4；P′C=AP=3",
+          "ok": false,
+          "why": "对应关系反了：AP 的像是 AP′，PB 的像是 P′C。旋转是「整体平移+转动」，不调换对应边。"
+        },
+        {
+          "t": "P′C = PC = 5",
+          "ok": false,
+          "why": "P′C 是 PB 的像，等于 4。PC 才是 5（PC 两个端点都不在旋转的三角形里——P 的像 P′ 和 C 是分开的）。"
+        }
+      ]
+    },
+    {
+      "kind": "quiz",
+      "tag": "b2",
+      "title": "第13(1) 填空：∠APB = ？",
+      "prompt": "继续看三角形：<br><br>① △APP′：AP=AP′=3，∠PAP′=60°（旋转角，等边三角形顶角）→ △APP′ 是等边三角形 → PP′=3，∠AP′P=60°<br>② △PP′C 三边：PP′=3，P′C=4，PC=5 → 3²+4²=5² → ∠PP′C=90°<br><br>而 ∠APB = ∠AP′C（旋转对应角）= ∠AP′P + ∠PP′C。等于多少？",
+      "options": [
+        {
+          "t": "150°",
+          "ok": true,
+          "why": "对！∠APB = ∠AP′C = 60° + 90° = 150°。填空就写 150°。<br><br>和第12(1)③ 的 150° 一模一样——同一套数字（3、4、5），同一条推理链。"
+        },
+        {
+          "t": "90°",
+          "ok": false,
+          "why": "90° 只是 △PP′C 里的那个直角，还要加上等边三角形的 60°。"
+        },
+        {
+          "t": "120°",
+          "ok": false,
+          "why": "120° 是把 60° 和 90° 弄混了算法，这里是相加不是别的运算。"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "b3",
+      "title": "第13(2) 半角模型：先看清「为什么它难」",
+      "html": "<p>题目：等腰直角 △ABC（∠CAB=90°，AB=AC），E、F 在斜边 BC 上，∠EAF=45°。求证 <b>EF²=BE²+FC²</b>。</p><img src=\"d0910_q13b.jpg\" style=\"width:100%;max-width:430px;border:1px solid #ddd;border-radius:8px;display:block;margin:8px auto\"><p><b>难点在哪？</b>EF、BE、FC 三条线段都躺在同一条直线 BC 上——它们<b>根本围不成三角形</b>，勾股定理用不上。</p><p><b>破局思路</b>：还是「搬运」！把 BE 搬到和 FC 垂直的位置去。</p><p><b>操作</b>：把 △ABE 绕点 A <b>逆时针旋转 90°</b>（AB 转到 AC），E 的像记为 E′：</p><p>🔹 AE′ = AE，CE′ = BE（搬运），∠BAE = ∠CAE′</p><p>🔹 求 ∠FAE′：∠FAE′ = ∠FAC + ∠CAE′ = ∠FAC + ∠BAE。<br>　而 ∠EAF = 45°，∠BAC = 90°，所以 ∠BAE + ∠FAC = 90° − 45° = 45°。<br>　→ <b>∠FAE′ = 45° = ∠EAF</b></p><p>🔹 加上 AF 是公共边 → <b>△AEF ≌ △AE′F（SAS）</b> → <b>EF = E′F</b></p><p>现在三条线段变成了 E′F、CE′（=BE）、FC——只要 CE′ ⊥ FC，就能用勾股了！</p>\n<svg viewBox=\"0 0 350 285\" style=\"width:100%;max-width:430px;background:#fff;border:1px solid #ddd;border-radius:8px\">\n  <polygon points=\"60,230 170,120 280,230\" fill=\"#eef5ff\" stroke=\"none\"/>\n  <polygon points=\"170,120 280,230 280,165.6\" fill=\"#eaf7ef\" stroke=\"none\" opacity=\"0.85\"/>\n  <line x1=\"60\" y1=\"230\" x2=\"170\" y2=\"120\" stroke=\"#4a7dbd\" stroke-width=\"2\"/>\n  <line x1=\"170\" y1=\"120\" x2=\"280\" y2=\"230\" stroke=\"#4a7dbd\" stroke-width=\"2\"/>\n  <line x1=\"280\" y1=\"230\" x2=\"60\" y2=\"230\" stroke=\"#4a7dbd\" stroke-width=\"2\"/>\n  <line x1=\"170\" y1=\"120\" x2=\"124.4\" y2=\"230\" stroke=\"#e67e22\" stroke-width=\"2\"/>\n  <line x1=\"170\" y1=\"120\" x2=\"215.6\" y2=\"230\" stroke=\"#e67e22\" stroke-width=\"2\"/>\n  <line x1=\"170\" y1=\"120\" x2=\"280\" y2=\"165.6\" stroke=\"#3d9c63\" stroke-width=\"2.2\"/>\n  <line x1=\"280\" y1=\"165.6\" x2=\"215.6\" y2=\"230\" stroke=\"#c0392b\" stroke-width=\"2.4\" stroke-dasharray=\"7 4\"/>\n  <line x1=\"280\" y1=\"230\" x2=\"280\" y2=\"165.6\" stroke=\"#3d9c63\" stroke-width=\"2.2\"/>\n  <path d=\"M 270 220 L 280 220 L 280 230\" fill=\"none\" stroke=\"#c0392b\" stroke-width=\"1.5\"/>\n  <path d=\"M 152 136 A 26 26 0 0 0 190 137\" fill=\"none\" stroke=\"#8e44ad\" stroke-width=\"1.8\"/>\n  <line x1=\"82\" y1=\"230\" x2=\"82\" y2=\"222\" stroke=\"#e67e22\" stroke-width=\"1.6\"/>\n  <line x1=\"78\" y1=\"230\" x2=\"78\" y2=\"222\" stroke=\"#e67e22\" stroke-width=\"1.6\"/>\n  <line x1=\"276\" y1=\"212\" x2=\"284\" y2=\"212\" stroke=\"#3d9c63\" stroke-width=\"1.6\"/>\n  <line x1=\"276\" y1=\"208\" x2=\"284\" y2=\"208\" stroke=\"#3d9c63\" stroke-width=\"1.6\"/>\n  <circle cx=\"170\" cy=\"120\" r=\"4\" fill=\"#2c3e50\"/><circle cx=\"60\" cy=\"230\" r=\"4\" fill=\"#2c3e50\"/>\n  <circle cx=\"280\" cy=\"230\" r=\"4\" fill=\"#2c3e50\"/><circle cx=\"124.4\" cy=\"230\" r=\"4\" fill=\"#2c3e50\"/>\n  <circle cx=\"215.6\" cy=\"230\" r=\"4\" fill=\"#2c3e50\"/><circle cx=\"280\" cy=\"165.6\" r=\"4.5\" fill=\"#3d9c63\"/>\n  <text x=\"164\" y=\"110\" font-size=\"14\" fill=\"#2c3e50\" font-weight=\"bold\">A</text>\n  <text x=\"46\" y=\"244\" font-size=\"14\" fill=\"#2c3e50\" font-weight=\"bold\">B</text>\n  <text x=\"288\" y=\"244\" font-size=\"14\" fill=\"#2c3e50\" font-weight=\"bold\">C</text>\n  <text x=\"120\" y=\"246\" font-size=\"14\" fill=\"#2c3e50\" font-weight=\"bold\">E</text>\n  <text x=\"212\" y=\"246\" font-size=\"14\" fill=\"#2c3e50\" font-weight=\"bold\">F</text>\n  <text x=\"288\" y=\"162\" font-size=\"14\" fill=\"#3d9c63\" font-weight=\"bold\">E′</text>\n  <text x=\"156\" y=\"152\" font-size=\"11.5\" fill=\"#8e44ad\">45°</text>\n  <text x=\"86\" y=\"222\" font-size=\"11\" fill=\"#e67e22\">BE</text>\n  <text x=\"240\" y=\"216\" font-size=\"11\" fill=\"#3d9c63\">CE′</text>\n  <text x=\"244\" y=\"200\" font-size=\"11.5\" fill=\"#c0392b\">EF=E′F</text>\n  <text x=\"282\" y=\"196\" font-size=\"11.5\" fill=\"#c0392b\">90°</text>\n  <text x=\"176\" y=\"140\" font-size=\"11\" fill=\"#3d9c63\">旋转 90°</text>\n</svg>"
+    },
+    {
+      "kind": "quiz",
+      "tag": "b4",
+      "title": "第13(2) 最后一环：∠E′CF 为什么是 90°？",
+      "prompt": "还差最后一步：证明 CE′ 与 CF 垂直。<br><br>△ABC 是等腰直角（∠CAB=90°），所以底角 <b>∠ACB = ∠ABC = 45°</b>。<br><br>全等/旋转又给出 ∠ACE′ = ∠ABE = 45°。<br><br>而 C 点处，射线 CE′ 与 CF 分别在 CA 的两侧，所以 ∠E′CF = ？",
+      "options": [
+        {
+          "t": "45° + 45° = 90°",
+          "ok": true,
+          "why": "对！∠ACE′=45°（在 CA 上方）+ ∠ACF=45°（在 CA 下方）= 90°。<br><br>于是 Rt△E′CF 中：E′F² = CE′² + CF² = BE² + FC²，而 E′F=EF → <b>EF² = BE²+FC²</b> 证毕！"
+        },
+        {
+          "t": "45°",
+          "ok": false,
+          "why": "45° 只是其中一半。要看清 CE′ 和 CF 分别在 CA 的两侧，两半相加。"
+        },
+        {
+          "t": "135°",
+          "ok": false,
+          "why": "135° = 90°+45°，那是 ∠E′CB 之类的外角，不是 ∠E′CF。"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "b5",
+      "title": "第13(3) 能力提升：三个 120° 是什么意思？",
+      "html": "<p>题目：Rt△ABC 中 ∠ACB=90°，AC=1，∠ABC=30°，O 是内一点，且 <b>∠AOC=∠COB=∠BOA=120°</b>，求 (OA+OB+OC)²。</p><img src=\"d0910_q13c.jpg\" style=\"width:100%;max-width:430px;border:1px solid #ddd;border-radius:8px;display:block;margin:8px auto\"><p><b>先读懂条件</b>：OA、OB、OC 三条射线绕 O 一圈，两两夹角都是 120°（120°×3=360°）。这样的点 O 在几何里叫三角形的<b>费马点</b>。</p><p><b>目标</b>：OA+OB+OC 是三条分离的线段，要是有办法把它们<b>拼成一条线段</b>，长度就能直接算。</p><p><b>旋转 60°，一步到位</b>（和前面的手法一模一样）：把 △AOC 绕点 C <b>逆时针旋转 60°</b>，A→A′，O→O′。看图：</p>\n<svg viewBox=\"0 0 340 300\" style=\"width:100%;max-width:430px;background:#fff;border:1px solid #ddd;border-radius:8px\">\n  <polygon points=\"150,250 150,180 271.2,250\" fill=\"#eef5ff\" stroke=\"none\"/>\n  <line x1=\"150\" y1=\"180\" x2=\"271.2\" y2=\"250\" stroke=\"#4a7dbd\" stroke-width=\"2\"/>\n  <line x1=\"271.2\" y1=\"250\" x2=\"150\" y2=\"250\" stroke=\"#4a7dbd\" stroke-width=\"2\"/>\n  <line x1=\"150\" y1=\"250\" x2=\"150\" y2=\"180\" stroke=\"#4a7dbd\" stroke-width=\"2\"/>\n  <line x1=\"150\" y1=\"180\" x2=\"167.3\" y2=\"230\" stroke=\"#e67e22\" stroke-width=\"1.6\" stroke-dasharray=\"5 3\"/>\n  <line x1=\"271.2\" y1=\"250\" x2=\"167.3\" y2=\"230\" stroke=\"#e67e22\" stroke-width=\"1.6\" stroke-dasharray=\"5 3\"/>\n  <line x1=\"150\" y1=\"250\" x2=\"167.3\" y2=\"230\" stroke=\"#e67e22\" stroke-width=\"1.6\" stroke-dasharray=\"5 3\"/>\n  <line x1=\"150\" y1=\"180\" x2=\"89.4\" y2=\"215\" stroke=\"#3d9c63\" stroke-width=\"2\"/>\n  <line x1=\"89.4\" y1=\"215\" x2=\"271.2\" y2=\"250\" stroke=\"#c0392b\" stroke-width=\"3\"/>\n  <circle cx=\"89.4\" cy=\"215\" r=\"4\" fill=\"#c0392b\"/><circle cx=\"141.3\" cy=\"225\" r=\"3.6\" fill=\"#c0392b\"/>\n  <circle cx=\"167.3\" cy=\"230\" r=\"3.6\" fill=\"#c0392b\"/><circle cx=\"271.2\" cy=\"250\" r=\"4\" fill=\"#c0392b\"/>\n  <circle cx=\"150\" cy=\"250\" r=\"4\" fill=\"#2c3e50\"/><circle cx=\"150\" cy=\"180\" r=\"4\" fill=\"#2c3e50\"/>\n  <text x=\"144\" y=\"172\" font-size=\"14\" fill=\"#2c3e50\" font-weight=\"bold\">A</text>\n  <text x=\"278\" y=\"256\" font-size=\"14\" fill=\"#2c3e50\" font-weight=\"bold\">B</text>\n  <text x=\"138\" y=\"266\" font-size=\"14\" fill=\"#2c3e50\" font-weight=\"bold\">C</text>\n  <text x=\"172\" y=\"226\" font-size=\"13\" fill=\"#e67e22\" font-weight=\"bold\">O</text>\n  <text x=\"74\" y=\"212\" font-size=\"14\" fill=\"#c0392b\" font-weight=\"bold\">A′</text>\n  <text x=\"130\" y=\"242\" font-size=\"12\" fill=\"#c0392b\" font-weight=\"bold\">O′</text>\n  <text x=\"90\" y=\"262\" font-size=\"11.5\" fill=\"#c0392b\">OA+OB+OC = A′B</text>\n  <text x=\"96\" y=\"200\" font-size=\"11\" fill=\"#3d9c63\">旋转 60°</text>\n  <text x=\"196\" y=\"238\" font-size=\"11\" fill=\"#e67e22\">120°</text>\n</svg><p>🔹 △COO′ 中 CO=CO′、∠OCO′=60° → <b>等边三角形</b> → OO′ = OC，∠COO′=60°</p><p>🔹 △A′O′C ≌ △AOC → <b>A′O′ = AO</b>，∠A′O′C = ∠AOC = 120°</p><p>🔹 <b>四点共线的理由</b>：∠A′O′O = ∠A′O′C − ∠OO′C... 换个更直白的说法——<br>在 O′ 处：∠A′O′O = 180°（120° + 等边三角形的 60° 恰好拼成平角）；<br>在 O 处：∠BOO′ = 180°（∠BOC=120° + ∠COO′=60°）。<br>两个平角把 A′、O′、O、B 钉在同一根直线上！</p><p style='background:#fff8ec;border:2px solid #e67e22;border-radius:10px;padding:12px 16px;line-height:2;font-size:15px'>于是：OA + OB + OC = A′O′ + OO′ + OB = <b style='color:#c0392b'>A′B</b>（一条线段！）</p><p>三条线段成功「焊接」成一条。下一步只要算 A′B 就行了。</p>"
+    },
+    {
+      "kind": "read",
+      "tag": "b6",
+      "title": "第13(3) 算 A′B：作高 + 30° + 勾股",
+      "html": "<p>先给一个工具卡（自己就能推，不用记结论）：<b>含 30° 的直角三角形，30° 所对的直角边 = 斜边的一半</b>。<br><span style='font-size:13px;color:#666'>证明：把短直角边延长一倍，拼出一个等边三角形（两边相等 + 夹角 60°），斜边正好是一条边 → 短直角边 = 斜边一半；再用勾股得另一条直角边 = 短边 × √3。</span></p><p><b>现在算 A′B</b>：△A′CB 中，CA′ = CA = 1，CB = √3（AC=1、∠ABC=30° → AB=2 → 勾股得 CB=√3），∠A′CB = ∠ACB + ∠ACA′ = 90° + 60° = <b>150°</b>。</p><p>150° 不好用，作高把它变成 30°：过 A′ 作 A′H ⊥ CB 的延长线于 H，则 ∠A′CH = 180° − 150° = <b>30°</b>。</p>\n<svg viewBox=\"0 0 340 290\" style=\"width:100%;max-width:430px;background:#fff;border:1px solid #ddd;border-radius:8px\">\n  <polygon points=\"85.1,212.5 85.1,250 279.9,250\" fill=\"#fdeeee\" stroke=\"none\"/>\n  <line x1=\"150\" y1=\"250\" x2=\"85.1\" y2=\"212.5\" stroke=\"#3d9c63\" stroke-width=\"2.2\"/>\n  <line x1=\"85.1\" y1=\"212.5\" x2=\"279.9\" y2=\"250\" stroke=\"#c0392b\" stroke-width=\"2.8\"/>\n  <line x1=\"85.1\" y1=\"212.5\" x2=\"85.1\" y2=\"250\" stroke=\"#8e44ad\" stroke-width=\"1.8\" stroke-dasharray=\"6 4\"/>\n  <line x1=\"150\" y1=\"250\" x2=\"279.9\" y2=\"250\" stroke=\"#4a7dbd\" stroke-width=\"2\"/>\n  <path d=\"M 85.1 240 L 95.1 240 L 95.1 250\" fill=\"none\" stroke=\"#8e44ad\" stroke-width=\"1.4\"/>\n  <path d=\"M 150 250 A 30 30 0 0 1 128 238\" fill=\"none\" stroke=\"#8e44ad\" stroke-width=\"1.6\"/>\n  <circle cx=\"85.1\" cy=\"212.5\" r=\"4\" fill=\"#c0392b\"/><circle cx=\"150\" cy=\"250\" r=\"4\" fill=\"#2c3e50\"/>\n  <circle cx=\"279.9\" cy=\"250\" r=\"4\" fill=\"#2c3e50\"/><circle cx=\"85.1\" cy=\"250\" r=\"4\" fill=\"#8e44ad\"/>\n  <text x=\"70\" y=\"208\" font-size=\"14\" fill=\"#c0392b\" font-weight=\"bold\">A′</text>\n  <text x=\"140\" y=\"268\" font-size=\"14\" fill=\"#2c3e50\" font-weight=\"bold\">C</text>\n  <text x=\"286\" y=\"256\" font-size=\"14\" fill=\"#2c3e50\" font-weight=\"bold\">B</text>\n  <text x=\"78\" y=\"266\" font-size=\"14\" fill=\"#8e44ad\" font-weight=\"bold\">H</text>\n  <text x=\"104\" y=\"232\" font-size=\"11.5\" fill=\"#3d9c63\">CA′=1</text>\n  <text x=\"200\" y=\"244\" font-size=\"11.5\" fill=\"#4a7dbd\">CB=√3</text>\n  <text x=\"62\" y=\"234\" font-size=\"11.5\" fill=\"#8e44ad\">A′H=½</text>\n  <text x=\"112\" y=\"266\" font-size=\"11.5\" fill=\"#8e44ad\">CH=√3/2</text>\n  <text x=\"196\" y=\"268\" font-size=\"11.5\" fill=\"#c0392b\">HB=3√3/2</text>\n  <text x=\"132\" y=\"242\" font-size=\"11\" fill=\"#8e44ad\">30°</text>\n  <text x=\"150\" y=\"214\" font-size=\"12\" fill=\"#c0392b\" font-weight=\"bold\">A′B² = ¼ + 27/4 = 7</text>\n</svg><p style='line-height:2'>🔹 Rt△A′CH：CA′=1 是斜边，∠A′CH=30° → <b>A′H = ½</b>，<b>CH = √3/2</b><br>🔹 <b>HB = HC + CB = √3/2 + √3 = 3√3/2</b><br>🔹 Rt△A′HB：A′B² = A′H² + HB² = (½)² + (3√3/2)² = ¼ + 27/4 = <b style='color:#c0392b'>7</b></p>"
+    },
+    {
+      "kind": "quiz",
+      "tag": "b7",
+      "title": "第13(3) 收网：(OA+OB+OC)² = ？",
+      "prompt": "把两步连起来：<br><br>① 旋转 60° 焊接：OA+OB+OC = A′B<br>② 作高 + 勾股：A′B² = ¼ + 27/4 = 7<br><br>所以 (OA+OB+OC)² = ？",
+      "options": [
+        {
+          "t": "7",
+          "ok": true,
+          "why": "对！(OA+OB+OC)² = A′B² = 7。<br><br>看这题的完整套路：<b>120° → 旋转 60° → 四点共线 → 三段焊接成一段 → 作高勾股</b>。旋转角选 60°，正是因为 120° + 60° = 180° 刚好成平角。"
+        },
+        {
+          "t": "4",
+          "ok": false,
+          "why": "4 = 1 + 3 是两直角边的平方和的一半值？其实 A′B² 要把 ¼ 和 27/4 相加，再检查一次。"
+        },
+        {
+          "t": "√7",
+          "ok": false,
+          "why": "题目问的是平方，7 才是答案；√7 是 (OA+OB+OC) 本身的值（≈2.65）。看清楚问什么——这是最容易白丢的分。"
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "tag": "s15",
+      "title": "总结：旋转法一网打尽",
+      "html": "<p><b>今天两道题、六个小问，全部是「旋转 + 勾股」：</b></p><table style='width:100%;border-collapse:collapse;font-size:13px'><tr style='background:#eef5ff'><th style='border:1px solid #ccd;padding:6px'>题目</th><th style='border:1px solid #ccd;padding:6px'>旋转角</th><th style='border:1px solid #ccd;padding:6px'>副产品</th><th style='border:1px solid #ccd;padding:6px'>收尾</th></tr><tr><td style='border:1px solid #ccd;padding:6px'>12(1)</td><td style='border:1px solid #ccd;padding:6px'>60°（等边）</td><td style='border:1px solid #ccd;padding:6px'>等边 △BOD → OD=4</td><td style='border:1px solid #ccd;padding:6px'>3-4-5 → ∠BDC=150°</td></tr><tr><td style='border:1px solid #ccd;padding:6px'>12(2)</td><td style='border:1px solid #ccd;padding:6px'>90°（等腰直角）</td><td style='border:1px solid #ccd;padding:6px'>等腰直角 △BOD → OD=√2·OB</td><td style='border:1px solid #ccd;padding:6px'>OA²+2OB²=OC²</td></tr><tr><td style='border:1px solid #ccd;padding:6px'>13(1)</td><td style='border:1px solid #ccd;padding:6px'>60°</td><td style='border:1px solid #ccd;padding:6px'>等边 △APP′ → PP′=3</td><td style='border:1px solid #ccd;padding:6px'>3-4-5 → ∠APB=150°</td></tr><tr><td style='border:1px solid #ccd;padding:6px'>13(2)</td><td style='border:1px solid #ccd;padding:6px'>90°</td><td style='border:1px solid #ccd;padding:6px'>AE′=AE → △AEF≌△AE′F</td><td style='border:1px solid #ccd;padding:6px'>45°+45°=90° → EF²=BE²+FC²</td></tr><tr><td style='border:1px solid #ccd;padding:6px'>13(3)</td><td style='border:1px solid #ccd;padding:6px'>60°</td><td style='border:1px solid #ccd;padding:6px'>等边 △COO′ → OO′=OC</td><td style='border:1px solid #ccd;padding:6px'>120°+60°=180° 共线 → A′B²=7</td></tr></table><p><b>三句口诀：</b></p><p>① <b>旋转角看顶角</b>：等边 60°、等腰直角 90°——转多少度，心里先有数。</p><p>② <b>旋转必送辅助三角形</b>：60° 送等边（给 60° 角），90° 送等腰直角（给 45° 角）。</p><p>③ <b>转完就找勾股数</b>：3-4-5、5-12-13、6-8-10 是命题人的最爱；角度凑不齐时，就看「大角 + 旋转角 = 180°」是否共线。</p><p style='background:#eef5ff;border-radius:10px;padding:10px 14px'>✍️ 去练 <b>rp0910.html</b>（4 题，含一道费马点变式）。<b>写证明时记得：每个直角都要有出处！</b></p>"
+    }
+  ]
+};
+window.COURSE = COURSE;
+
+
+/* ===================== 渲染引擎（一般不用改） ===================== */
+const stage = document.getElementById('stage');
+document.getElementById('courseTitle').textContent = COURSE.title;
+document.getElementById('courseSub').textContent = COURSE.subtitle;
+const bar = document.getElementById('bar');
+let cur = 0;
+
+function scrollTop(){
+  const el = document.querySelector('.wrap');
+  if (el && el.scrollIntoView) { try{ el.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){} }
+}
+
+function render(i){
+  cur = i;
+  const total = COURSE.steps.length;
+  bar.style.width = Math.round((i)/(total-1)*100) + '%';
+  stage.innerHTML = '';
+  const s = COURSE.steps[i];
+  const card = document.createElement('div');
+  card.className = 'step active';
+  let inner = '';
+  if (s.tag) inner += `<span class="tag">${s.tag}</span>`;
+  inner += `<h2>${s.title}</h2>`;
+  if (s.kind === 'quiz'){
+    inner += `<p>${s.prompt}</p><div class="opts" id="opts"></div><div class="fb" id="fb"></div>`;
+  } else {
+    inner += s.html || '';
+  }
+  // 导航按钮
+  const isLast = (i === total-1);
+  inner += `<div class="nav">`;
+  inner += i>0 ? `<button class="btn btn-back" id="back">← 上一步</button>` : `<span></span>`;
+  if (!isLast){
+    inner += `<button class="btn btn-next" id="next">下一步 →</button>`;
+  } else if (s.kind !== 'summary'){
+    inner += `<button class="btn btn-next" id="next">完成 ✓</button>`;
+  } else {
+    inner += `<span></span>`;
+  }
+  inner += `</div>`;
+  card.innerHTML = inner;
+  stage.appendChild(card);
+
+  if (s.kind === 'quiz') buildQuiz(s, card);
+  // 绑定导航
+  const nextBtn = card.querySelector('#next');
+  if (nextBtn){
+    if (s.kind === 'quiz'){ nextBtn.disabled = true; } // 答题后才解锁
+    nextBtn.addEventListener('click', ()=>{ if(!nextBtn.disabled) render(i+1); });
+  }
+  const backBtn = card.querySelector('#back');
+  if (backBtn) backBtn.addEventListener('click', ()=> render(i-1));
+  scrollTop();
+}
+
+function buildQuiz(s, card){
+  const optsBox = card.querySelector('#opts');
+  const fb = card.querySelector('#fb');
+  const nextBtn = card.querySelector('#next');
+  s.options.forEach((o, idx)=>{
+    const div = document.createElement('div');
+    div.className = 'opt';
+    div.innerHTML = `<span class="mk">${String.fromCharCode(65+idx)}</span><span>${o.t}</span>`;
+    div.addEventListener('click', ()=>{
+      // 锁定所有选项（避免重复点）
+      optsBox.querySelectorAll('.opt').forEach(el=>{ el.classList.add('locked'); });
+      // 先启用"下一步"（关键：绝不被反馈 handler 卡住）
+      if (nextBtn) nextBtn.disabled = false;
+      // 标出对错
+      div.classList.add(o.ok ? 'correct' : 'wrong', 'chosen');
+      if (!o.ok){
+        // 顺便高亮正确答案，让学生看到正解
+        optsBox.querySelectorAll('.opt').forEach((el,k)=>{ if(s.options[k].ok) el.classList.add('correct'); });
+      }
+      // 揭示评语（try/catch 兜底）
+      try{
+        fb.className = 'fb show ' + (o.ok ? 'ok' : 'bad');
+        fb.innerHTML = (o.ok ? '✅ <b>答对了：</b>' : '⚠️ <b>再看一眼：</b>') + o.why;
+      }catch(e){ /* 反馈出错也不影响下一步 */ }
+      scrollTop();
+    });
+    optsBox.appendChild(div);
+  });
+}
+
+render(0);
+</script>
+</body>
+</html>
