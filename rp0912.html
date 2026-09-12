@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>旋转作辅助线 · 配套练习卷</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:#f6f7fb;color:#1f2430;line-height:1.75;padding:18px}
+  .wrap{max-width:760px;margin:0 auto}
+  .head{background:linear-gradient(135deg,#4f6ef7,#7b5cf0);color:#fff;
+    border-radius:16px;padding:22px 24px;margin-bottom:16px}
+  .head h1{font-size:20px}
+  .head p{opacity:.92;margin-top:6px;font-size:14px}
+  .q{background:#fff;border:1px solid #e6e9f0;border-radius:14px;
+    padding:18px 20px;margin-bottom:14px;box-shadow:0 4px 14px rgba(31,36,48,.05)}
+  .q h3{font-size:16.5px;margin-bottom:10px;color:#4f6ef7}
+  .q p{font-size:15.5px;margin:6px 0}
+  .q ol,.q ul{margin:8px 0 8px 22px;font-size:15.5px}
+  hr{border:none;border-top:1px dashed #dfe3ee;margin:12px 0}
+  details{background:#fff8e6;border:1px solid #f0e0bd;border-radius:10px;
+    padding:10px 14px;margin-top:10px;font-size:15px}
+  summary{cursor:pointer;font-weight:bold;color:#b7791f}
+  .foot{text-align:center;color:#8a94a6;font-size:13.5px;padding:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="head">
+  <h1>旋转作辅助线 · 配套练习卷</h1>
+  <p>共 5 题 · 前 2 题考概念，后 3 题要动手做<br>做之前先把「配对表」写出来，再动笔算</p>
+</div>
+
+<div class="q">
+  <h3>练习 1 · 概念判断（不定项）</h3>
+  <p>把一个三角形绕某个点旋转 60° 之后，下面哪些说法<b>一定成立</b>？</p>
+  <ol type="A"><li>旋转中心那个点的位置没有变化</li>
+  <li>所有的边长都保持不变</li>
+  <li>所有的内角大小都保持不变</li>
+  <li>旋转前后的两个三角形全等</li></ol>
+  <hr>
+  <details><summary>点开对答案</summary>
+  <p><b>答案：A、B、C、D 全选。</b></p>
+  <p>这四条正是旋转的性质，缺一不可：中心不动、边长不变、角度不变、前后全等（SAS）。</p>
+  <p>注意第 D 条不是「大概全等」，是<b>严格全等</b>——所以可以直接写 ≌ 并用它推边等、角等。</p>
+  </details>
+</div>
+
+<div class="q">
+  <h3>练习 2 · 配对训练（本题最关键）</h3>
+  <p>已知：等边 △ABC，P 是内部一点。把 <b>△ABP 绕点 A 逆时针旋转 60°</b>，落到 △ACP′ 的位置。</p>
+  <p>请把下面的配对表补全：</p>
+  <ul>
+    <li>AB → ______（等于谁）</li>
+    <li>AP → ______（等于谁）</li>
+    <li>BP → ______（被搬到哪儿去了）</li>
+    <li>∠ABP → ______（对应角）</li>
+    <li>∠APB → ______（对应角）</li>
+    <li>写出全等式：△ABP ≌ ______，依据是 ______</li>
+    <li>额外收获：连 PP′ 后，△APP′ 是什么三角形？为什么？</li>
+  </ul>
+  <hr>
+  <details><summary>点开对答案</summary>
+  <p><b>答案：</b></p>
+  <ul>
+    <li>AB → <b>AC</b>（AB = AC，等边或用旋转：B 落到 C）</li>
+    <li>AP → <b>AP′</b>（AP = AP′，旋转性质）</li>
+    <li>BP → <b>CP′</b>（BP = CP′，这就是「搬走的那条边」）</li>
+    <li>∠ABP → <b>∠ACP′</b></li>
+    <li>∠APB → <b>∠AP′C</b></li>
+    <li>全等式：△ABP ≌ <b>△ACP′</b>，依据 <b>SAS</b>（AB=AC，∠BAP=∠CAP′，AP=AP′）</li>
+    <li><b>△APP′ 是等边三角形</b>：因为 AP = AP′（旋转），且 ∠PAP′ = 60°（就是旋转角）。
+    「有一个角是 60° 的等腰三角形是等边三角形」→ <b>PP′ = AP</b>。</li>
+  </ul>
+  <p style="color:#c0392b"><b>这张表就是「不再找不到全等」的解药，务必背到能默出来。</b></p>
+  </details>
+</div>
+
+<div class="q">
+  <h3>练习 3 · 60° 定量实战</h3>
+  <p>等边 △ABC，P 为内部一点，已知 <b>PA = 5，PB = 12，PC = 13</b>。</p>
+  <p><b>求 ∠APB 的度数。</b></p>
+  <p style="color:#8a94a6;font-size:14px">小提醒：用「绕 A 逆时针转 60°」，先写配对表，再看白送的那个等边三角形。</p>
+  <hr>
+  <details><summary>点开对答案</summary>
+  <p><b>答案：∠APB = 150°</b></p>
+  <p><b>过程：</b></p>
+  <ol>
+    <li>把 △ABP 绕 A 逆时针旋转 60° → △ACP′，则 <b>P′C = PB = 12</b>，<b>AP′ = AP = 5</b>。</li>
+    <li>连 PP′：△APP′ 是等边三角形 → <b>PP′ = 5</b>，且 ∠AP′P = 60°。</li>
+    <li>看 △PP′C：三边是 PP′=5、P′C=12、PC=13。<br>
+    因为 5² + 12² = 25 + 144 = 169 = 13²，由<b>勾股定理逆定理</b>得 <b>∠PP′C = 90°</b>。</li>
+    <li>于是 ∠AP′C = ∠AP′P + ∠PP′C = 60° + 90° = <b>150°</b>。</li>
+    <li>由全等 ∠APB = ∠AP′C = <b>150°</b>。</li>
+  </ol>
+  <p><b>坑点：</b>千万别直接写「因为 5²+12²=13²，所以 ∠APB=90°」——5、12、13 <b>不在 ∠APB 这个三角形里</b>，
+  必须先搬过去才能用。这一步是整套题的灵魂。</p>
+  </details>
+</div>
+
+<div class="q">
+  <h3>练习 4 · 90° 定量实战</h3>
+  <p>正方形 ABCD，P 为内部一点，已知 <b>PA = 1，PB = 2，PC = 3</b>。</p>
+  <p><b>求 ∠APB 的度数。</b></p>
+  <p style="color:#8a94a6;font-size:14px">小提醒：这次是 90° 卡片——绕顶点 B 转，白送的是<b>等腰直角</b>三角形。</p>
+  <hr>
+  <details><summary>点开对答案</summary>
+  <p><b>答案：∠APB = 135°</b></p>
+  <p><b>过程：</b></p>
+  <ol>
+    <li>把 △ABP 绕 <b>B</b> 旋转 90°，使 BA 落到 BC 上 → P 落到 P′，得 △CBP′ ≌ △ABP。</li>
+    <li>于是 <b>BP′ = BP = 2，P′C = PA = 1</b>，且 ∠PBP′ = 90°。</li>
+    <li>△PBP′ 中：BP = BP′ = 2，夹角 90° → <b>等腰直角</b>，得 <b>PP′ = 2√2</b>，∠BP′P = 45°。</li>
+    <li>看 △PP′C：PP′=2√2、P′C=1、PC=3。<br>
+    (2√2)² + 1² = 8 + 1 = 9 = 3² → <b>∠PP′C = 90°</b>。</li>
+    <li>∠APB = ∠BP′C = ∠BP′P + ∠PP′C = <b>45° + 90° = 135°</b>。</li>
+  </ol>
+  <p><b>和练习 3 对比着看：</b>60° 版本是「60° + 90° = 150°」，90° 版本是「45° + 90° = 135°」。
+  <b>结构完全一样，只是折算出来的那个角度不同。</b></p>
+  </details>
+</div>
+
+<div class="q">
+  <h3>练习 5 · 方案设计（专治「不知道该转谁」）</h3>
+  <p>不做计算，只要求你写出<b>旋转方案</b>。每一小题请把这四项都写全：</p>
+  <p style="text-align:center;background:#eef1fe;border-radius:8px;padding:8px;font-size:15px">
+    <b>①绕哪个点　②转多少度　③把哪个三角形转到哪里　④转完白送什么</b></p>
+  <p><b>(1)</b> 等边 △ABC，内部一点 P，已知 PA、PB、PC。<b>目标：把 PB 搬走。</b></p>
+  <p><b>(2)</b> 正方形 ABCD，内部一点 P，已知 PA、PB、PC。<b>目标：把 PA 搬到 C 那边去。</b></p>
+  <p><b>(3)</b> 等腰 △ABC，AB = AC，顶角 ∠A = 40°，内部一点 P。<b>目标：把含 PB 的那块搬走。</b></p>
+  <hr>
+  <details><summary>点开对答案</summary>
+  <p><b>(1)</b> ①绕 <b>A</b>；②逆时针 <b>60°</b>；③把 <b>△ABP</b> 转到 <b>△ACP′</b>；
+  ④白送 <b>等边 △APP′</b>（于是 PP′ = AP），且 <b>BP = CP′</b>。</p>
+  <p><b>(2)</b> ①绕 <b>B</b>（因为要让 BA 落到 BC 上，BA=BC 是正方形的边）；②<b>90°</b>；
+  ③把 <b>△ABP</b> 转到 <b>△CBP′</b>；④白送 <b>等腰直角 △PBP′</b>（于是 PP′ = √2·BP），且 <b>AP = CP′</b>。</p>
+  <p><b>(3)</b> ①绕顶角顶点 <b>A</b>；②<b>40°</b>（<b>顶角就是旋转角</b>）；
+  ③把 <b>△ABP</b> 转到 <b>△ACP′</b>；④白送一个<b>腰长为 AP、顶角 40° 的等腰 △APP′</b>，且 <b>BP = CP′</b>。</p>
+  <p style="color:#c0392b"><b>三小题的答案结构完全一样，只有「转多少度」和「白送什么三角形」不同。</b>
+  记住这个模板，考场上遇到任何背景都能套。</p>
+  </details>
+</div>
+
+<div class="foot">写完拍照给老师批改 —— 重点看练习 2 的配对表写全了没有</div>
+</div>
+</body>
+</html>
