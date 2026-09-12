@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>苏格拉底互动特训课</title>
+<!--
+  =====================================================================
+  初中数学 · 苏格拉底互动特训课 模板（math-socratic-trainer 技能资产）
+  ---------------------------------------------------------------------
+  怎么用：复制本文件，只改下面的 COURSE 对象即可，不要从零写 HTML。
+
+  已修复的已知坑（详见技能 SKILL.md Pitfalls）：
+    ✅ 原生 CSS，不用 Tailwind @apply
+    ✅ 选项绝不预显示"对/接近/反了"——评语只在点击后揭示
+    ✅ 不用 window['check'+id] 拼函数名，改用数据驱动 + 闭包绑定
+    ✅ 不用 split('-') 解析 dash（旧坑：c1-1 → NaN → 下一步死锁）
+       本模板用"步骤索引"驱动，根本不存在 dash 解析
+    ✅ checkQuiz：先启用"下一步"，再 try/catch 显示反馈——
+       反馈 handler 报错也绝不会卡住下一步
+    ✅ scrollIntoView 带 if 防御（部分 webview 缺该方法）
+  几何/题干图：用 PDF 真实截图 base64 嵌入 <img>，严禁手绘 SVG。
+  =====================================================================
+-->
+<style>
+  :root{
+    --bg:#f6f7fb; --card:#ffffff; --ink:#1f2430; --sub:#5b6472;
+    --line:#e6e9f0; --accent:#4f6ef7; --accent-soft:#eef1fe;
+    --ok:#1f9d6b; --ok-soft:#e7f7ef; --bad:#e0533d; --bad-soft:#fdecea;
+    --warn:#b7791f; --radius:16px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.7;padding:18px}
+  .wrap{max-width:760px;margin:0 auto}
+  .head{background:linear-gradient(135deg,#4f6ef7,#7b5cf0);color:#fff;
+    border-radius:var(--radius);padding:22px 24px;margin-bottom:16px;
+    box-shadow:0 8px 24px rgba(79,110,247,.25)}
+  .head h1{font-size:21px;letter-spacing:.5px}
+  .head p{opacity:.92;margin-top:6px;font-size:14px}
+  .progress{height:8px;background:rgba(255,255,255,.35);border-radius:99px;
+    margin-top:14px;overflow:hidden}
+  .progress>i{display:block;height:100%;width:0;background:#fff;
+    border-radius:99px;transition:width .3s}
+  .step{display:none;background:var(--card);border:1px solid var(--line);
+    border-radius:var(--radius);padding:22px 22px 18px;margin-bottom:14px;
+    box-shadow:0 4px 16px rgba(31,36,48,.05)}
+  .step.active{display:block;animation:fade .35s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .tag{display:inline-block;font-size:12px;font-weight:700;color:var(--accent);
+    background:var(--accent-soft);padding:3px 10px;border-radius:99px;margin-bottom:10px}
+  .step h2{font-size:18px;margin-bottom:12px}
+  .step p,.step li{font-size:15.5px;color:var(--ink)}
+  .step p{margin:8px 0}
+  .step ul,.step ol{margin:8px 0 8px 22px}
+  .step li{margin:5px 0}
+  .note{background:var(--accent-soft);border-left:4px solid var(--accent);
+    padding:10px 14px;border-radius:10px;margin:12px 0;font-size:14.5px;color:#2b3550}
+  .imgbox{margin:14px 0;text-align:center}
+  .imgbox img{max-width:100%;border:1px solid var(--line);border-radius:12px;background:#fff}
+  .opts{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+  .opt{display:flex;align-items:flex-start;gap:10px;cursor:pointer;
+    border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;
+    font-size:15px;transition:.15s;background:#fff}
+  .opt:hover{border-color:var(--accent);background:var(--accent-soft)}
+  .opt .mk{flex:0 0 22px;height:22px;border-radius:50%;border:1.5px solid #c4cad6;
+    display:flex;align-items:center;justify-content:center;font-size:13px;color:#8a93a3;font-weight:700}
+  .opt.chosen{border-color:var(--accent)}
+  .opt.correct{border-color:var(--ok);background:var(--ok-soft)}
+  .opt.wrong{border-color:var(--bad);background:var(--bad-soft)}
+  .opt.locked{cursor:default;pointer-events:none}
+  .fb{margin-top:14px;padding:12px 14px;border-radius:12px;font-size:14.5px;
+    display:none}
+  .fb.show{display:block;animation:fade .3s}
+  .fb.ok{background:var(--ok-soft);border:1px solid #bfe9d3;color:#146b48}
+  .fb.bad{background:var(--bad-soft);border:1px solid #f6c9c0;color:#8f2f20}
+  .fb b{color:inherit}
+  .nav{display:flex;justify-content:space-between;gap:10px;margin-top:18px}
+  .btn{border:none;border-radius:12px;padding:12px 20px;font-size:15px;
+    font-weight:700;cursor:pointer;transition:.15s}
+  .btn-next{background:var(--accent);color:#fff;flex:1}
+  .btn-next:hover{background:#3f5ce8}
+  .btn-next:disabled{background:#c8cee0;color:#fff;cursor:not-allowed}
+  .btn-back{background:#fff;color:var(--sub);border:1.5px solid var(--line)}
+  .btn-back:hover{border-color:var(--accent);color:var(--accent)}
+  .done{text-align:center;padding:8px 0 4px;color:var(--ok);font-weight:700}
+  .foot{text-align:center;color:var(--sub);font-size:12.5px;margin:8px 0 28px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <h1 id="courseTitle">互动特训课</h1>
+    <p id="courseSub">跟着问题一步步想，别急着看答案</p>
+    <div class="progress"><i id="bar"></i></div>
+  </div>
+  <div id="stage"></div>
+  <div class="foot">讲人话 · 一步步来 · 你一定能看懂</div>
+</div>
+
+<script>
+/* =====================================================================
+   只改这里：COURSE 对象
+   - steps 是一道题拆成的若干引导环节
+   - kind: "read" 讲解/读题 | "quiz" 选择题 | "summary" 母套路小结卡
+   - quiz 的 options: {t:选项文字, ok:是否正确答案, why:点击后才显示的讲解}
+   - why 里可以放 <b> 等简单 HTML
+   ===================================================================== */
+var COURSE = {
+  "title": "旋转作辅助线 · 知识根子课",
+  "subtitle": "七年级下册全等三角形的旋转方法，从根上讲透为什么会全等",
+  "steps": [
+    {
+      "kind": "read",
+      "tag": "开场",
+      "title": "你的困惑，我听懂了",
+      "html": "<p>你说：<b>「知道要用旋转，但转完之后不知道该看哪两个三角形。」</b></p><p>这句话很值钱——它说明你的问题不是不会转，而是<b>不知道转完之后会「自动生成」什么东西</b>。</p><div class=\"note\"><b>今天这节课不讲题，讲根子。</b>把七年级下册「全等三角形的旋转」这条辅助线方法，从「为什么要有它」一直讲到「动手的四个动作」。讲完之后，你再回头看那些不会做的题，会发现它们其实都是同一句话的三种说法。</div><p style=\"color:#5b6472;font-size:14.5px\">上课方式：每一步我会先问你一个小问题，选完之后才告诉你为什么。选错没关系，错一次记得最牢。</p>"
+    },
+    {
+      "kind": "read",
+      "tag": "一",
+      "title": "第一步认知：旋转就是「搬家」",
+      "html": "<p>先说人话。<b>旋转这条辅助线，本质是「搬东西」。</b></p><p>题目里经常这样坑你：给了你三条线段的长度（比如 PA=3、PB=4、PC=5），但这三条线段的起点是同一个点 P，终点却散在 A、B、C 三个不同的方向。</p><p>你要算出它们的关系，可它们<b>根本不在同一个三角形里</b>——没法用勾股，没法用全等。</p><div class=\"note\">这时候怎么办？<b>把其中一条搬到旁边去，让它和另一条接到一起。</b><br>搬运的工具，就是旋转。</div><p>打个比方：三根木棍散在地上拼不成三角形，你得<b>拎起一根挪过去</b>，让它们首尾相接。旋转就是那只「拎起来挪过去」的手。</p>"
+    },
+    {
+      "kind": "quiz",
+      "tag": "一",
+      "title": "检验：为什么要搬家",
+      "prompt": "下面哪种情况，最可能需要用旋转作辅助线？",
+      "options": [
+        {
+          "t": "A. 题目给了三条线段长度，但它们不在同一个三角形里，要你求角度或关系",
+          "ok": true,
+          "why": "✅ <b>正中靶心。</b>三条线段散着没法算，必须搬一条过去，让它们拼进同一个三角形。这就是旋转的主战场。"
+        },
+        {
+          "t": "B. 题目只给了一条线段，让你求它的长度",
+          "ok": false,
+          "why": "❌ 只有一条线段，没什么可搬的。这种题通常用勾股、全等或方程就够了，轮不到旋转出场。"
+        },
+        {
+          "t": "C. 题目让你证明两条直线平行",
+          "ok": false,
+          "why": "❌ 证平行一般靠同位角、内错角、平行四边形，跟旋转关系不大。"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "一",
+      "title": "图钉钉纸板：旋转到底干了什么",
+      "html": "<p>想一个动作：把一张三角形的纸片放在桌上，<b>用一个图钉钉住它的一个顶点</b>，然后转动这张纸。</p>观察三件事：</p><ul><li><b>被钉住的那个点纹丝不动</b>——它叫<b>旋转中心</b></li><li><b>纸的大小、形状、边长、角度全都没变</b>——只是躺的位置变了</li><li><b>转多少度是可以任意控制的</b>——这个角度叫<b>旋转角</b></li></ul><div class=\"note\"><b>记住这三句话，旋转的一半就学会了：</b><br>① 有一个点<b>不动</b>（旋转中心）<br>② 所有<b>边长不变</b>、所有<b>角度不变</b><br>③ 只是<b>位置</b>和<b>朝向</b>变了</div>"
+    },
+    {
+      "kind": "read",
+      "tag": "二",
+      "title": "关键认知：转过去的是「整张纸板」",
+      "html": "<p>下面这句话，是这节课<b>最重要的一句</b>，也是你说的「找不到全等三角形」的真正原因：</p><div class=\"note\" style=\"font-size:16px;text-align:center;line-height:1.9\"><b>旋转的时候，你要把一个「完整的三角形」整体搬过去，<br>而不是只搬一个孤零零的点。</b></div><p>很多同学做题时脑子里想的是：「我把点 P 转过去，标个 P′。」——然后就卡住了，因为<b>光有一个点 P′，什么都联系不上</b>。</p><p>正确的想法是：<b>把 △ABP 这整张纸板（三条边+三个角）一块儿拎起来转过去。</b></p><p style=\"color:#c0392b\"><b>只要整张纸板过去了，全等就是自动产生的——你根本不用去找它，它就在那儿。</b></p>\n<svg viewBox=\"0 0 420 350\" style=\"width:100%;max-width:430px;background:#fff;border:1px solid #ddd;border-radius:8px\">\n  <polygon points=\"60,300 210,40.2 360,300\" fill=\"#f2f7ff\" stroke=\"none\"/>\n  <line x1=\"60\" y1=\"300\" x2=\"210\" y2=\"40.2\" stroke=\"#4a7dbd\" stroke-width=\"2.4\"/>\n  <line x1=\"210\" y1=\"40.2\" x2=\"360\" y2=\"300\" stroke=\"#4a7dbd\" stroke-width=\"2.4\"/>\n  <line x1=\"360\" y1=\"300\" x2=\"60\" y2=\"300\" stroke=\"#4a7dbd\" stroke-width=\"2.4\"/>\n  <polygon points=\"60,300 210,40.2 168,210\" fill=\"#bfe0c9\" stroke=\"none\" opacity=\"0.75\"/>\n  <line x1=\"210\" y1=\"40.2\" x2=\"168\" y2=\"210\" stroke=\"#3d9c63\" stroke-width=\"2.8\"/>\n  <line x1=\"60\" y1=\"300\" x2=\"168\" y2=\"210\" stroke=\"#e67e22\" stroke-width=\"2.8\"/>\n  <line x1=\"168\" y1=\"210\" x2=\"360\" y2=\"300\" stroke=\"#8a94a6\" stroke-width=\"1.8\" stroke-dasharray=\"5,4\"/>\n  <defs>\n    <marker id=\"ar1\" markerWidth=\"9\" markerHeight=\"9\" refX=\"6\" refY=\"3\" orient=\"auto\">\n      <path d=\"M0,0 L8,3 L0,6 Z\" fill=\"#c0392b\"/></marker>\n    <marker id=\"ar2\" markerWidth=\"9\" markerHeight=\"9\" refX=\"6\" refY=\"3\" orient=\"auto\">\n      <path d=\"M0,0 L8,3 L0,6 Z\" fill=\"#7b5cf0\"/></marker>\n  </defs>\n  <path d=\"M 210 40.2 L 260 126.8\" stroke=\"#c0392b\" stroke-width=\"1.2\" stroke-dasharray=\"4,3\" opacity=\"0.5\"/>\n  <path d=\"M 210 40.2 L 116 126.8\" stroke=\"#c0392b\" stroke-width=\"1.2\" stroke-dasharray=\"4,3\" opacity=\"0.5\"/>\n  <path d=\"M 155 122 A 60 60 0 0 1 265 122\" fill=\"none\" stroke=\"#c0392b\" stroke-width=\"2.2\" marker-end=\"url(#ar1)\"/>\n  <text x=\"286\" y=\"112\" font-size=\"15\" fill=\"#c0392b\" font-weight=\"bold\">转 60°</text>\n  <text x=\"196\" y=\"30\" font-size=\"15\" fill=\"#2c3e50\" font-weight=\"bold\">A（图钉钉这里）</text>\n  <text x=\"34\" y=\"320\" font-size=\"15\" fill=\"#2c3e50\" font-weight=\"bold\">B</text>\n  <text x=\"368\" y=\"320\" font-size=\"15\" fill=\"#2c3e50\" font-weight=\"bold\">C</text>\n  <text x=\"146\" y=\"204\" font-size=\"15\" fill=\"#c0392b\" font-weight=\"bold\">P</text>\n  <text x=\"86\" y=\"268\" font-size=\"13\" fill=\"#e67e22\" font-weight=\"bold\">要搬走的边</text>\n  <text x=\"196\" y=\"152\" font-size=\"13\" fill=\"#3d9c63\" font-weight=\"bold\">跟着走</text>\n  <text x=\"150\" y=\"338\" font-size=\"13.5\" fill=\"#4a7dbd\">等边三角形 ABC：AB = AC = BC</text>\n  <circle cx=\"210\" cy=\"40.2\" r=\"6\" fill=\"#c0392b\"/>\n  <circle cx=\"210\" cy=\"40.2\" r=\"11\" fill=\"none\" stroke=\"#c0392b\" stroke-width=\"1.6\"/>\n  <circle cx=\"60\" cy=\"300\" r=\"4.5\" fill=\"#2c3e50\"/>\n  <circle cx=\"360\" cy=\"300\" r=\"4.5\" fill=\"#2c3e50\"/>\n  <circle cx=\"168\" cy=\"210\" r=\"5\" fill=\"#c0392b\"/>\n</svg>\n<p style=\"font-size:14.5px;color:#5b6472\">（看图：绿色+橙色组成的那一整块 △ABP 就是「纸板」，我们要把它绕 A 转 60°。）</p>"
+    },
+    {
+      "kind": "quiz",
+      "tag": "二",
+      "title": "找茬：小明做对了吗",
+      "prompt": "小明做题时写下：「把点 P 绕点 A 逆时针旋转 60°，得到点 P′，连接 PP′。」然后他就不知道下一步干什么了。你觉得他的问题在哪？",
+      "options": [
+        {
+          "t": "A. 他应该把整个 △ABP 转过去，而不是只转一个点 P",
+          "ok": true,
+          "why": "✅ <b>抓到根了！</b>只转一个点 P，你只有一个孤零零的 P′，啥也连不上。把整张纸板 △ABP 转过去，△ACP′ 就整整齐齐地出现了——全等是「批发」来的，不用零买。"
+        },
+        {
+          "t": "B. 他转的角度选错了，应该转 90°",
+          "ok": false,
+          "why": "❌ 角度没错。等边三角形就是转 60°（为什么，后面专门讲）。他的毛病不在角度，在于只转了一个点。"
+        },
+        {
+          "t": "C. 他应该先连 BP′ 而不是 PP′",
+          "ok": false,
+          "why": "❌ 连哪条线不是根本问题。就算连对了线，只转一个点也没法说明任何边相等。根本问题还是「没转整张纸板」。"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "二",
+      "title": "为什么必有全等？—— SAS 一次讲死",
+      "html": "<p>好，现在我们把 △ABP 整张纸板绕 A 逆时针转 60°，让它落到 △ACP′ 的位置。</p><p>为什么这两个三角形<b>一定</b>全等？因为它们天然满足 SAS：</p><table style=\"width:100%;border-collapse:collapse;font-size:14px;margin:10px 0\"><tr style=\"background:#eef1fe\"><th style=\"border:1px solid #dfe3ee;padding:8px 6px\">SAS 三件事</th><th style=\"border:1px solid #dfe3ee;padding:8px 6px\">在图上对应哪里</th><th style=\"border:1px solid #dfe3ee;padding:8px 6px\">凭什么成立</th></tr><tr><td style=\"border:1px solid #dfe3ee;padding:8px 6px\"><b>S</b>（边）</td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\">AB = AC</td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\">因为是<b>等边</b>三角形</td></tr><tr><td style=\"border:1px solid #dfe3ee;padding:8px 6px\"><b>A</b>（夹角）</td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\">∠BAP = ∠CAP′</td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\">都等于「60° 减去公共角 PAC」</td></tr><tr><td style=\"border:1px solid #dfe3ee;padding:8px 6px\"><b>S</b>（边）</td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\">AP = AP′</td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\"><b>旋转本身的性质</b>（旋转中心到对应点距离相等）</td></tr></table><div class=\"note\">注意第二行那个角：∠BAP 里的 ∠PAC 是原来就有的公共部分，∠CAP′ 里也同样含着这个 ∠PAC（因为 P′ 是从 P 转过来的）。两边同减公共角，剩下的两个角就相等了。<b>这是写「为什么全等」时最容易漏说的一句。</b></div>\n<svg viewBox=\"0 0 420 350\" style=\"width:100%;max-width:430px;background:#fff;border:1px solid #ddd;border-radius:8px\">\n  <polygon points=\"60,300 210,40.2 360,300\" fill=\"#f2f7ff\" stroke=\"none\"/>\n  <polygon points=\"60,300 210,40.2 168,210\" fill=\"#e8e8ef\" stroke=\"none\" opacity=\"0.6\"/>\n  <polygon points=\"360,300 210,40.2 336.1,161.5\" fill=\"#ffe9e6\" stroke=\"none\" opacity=\"0.85\"/>\n  <line x1=\"60\" y1=\"300\" x2=\"210\" y2=\"40.2\" stroke=\"#4a7dbd\" stroke-width=\"2.4\"/>\n  <line x1=\"210\" y1=\"40.2\" x2=\"360\" y2=\"300\" stroke=\"#4a7dbd\" stroke-width=\"2.4\"/>\n  <line x1=\"360\" y1=\"300\" x2=\"60\" y2=\"300\" stroke=\"#4a7dbd\" stroke-width=\"2.4\"/>\n  <line x1=\"210\" y1=\"40.2\" x2=\"168\" y2=\"210\" stroke=\"#aab0bd\" stroke-width=\"2\" stroke-dasharray=\"5,4\"/>\n  <line x1=\"60\" y1=\"300\" x2=\"168\" y2=\"210\" stroke=\"#aab0bd\" stroke-width=\"2\" stroke-dasharray=\"5,4\"/>\n  <line x1=\"210\" y1=\"40.2\" x2=\"336.1\" y2=\"161.5\" stroke=\"#3d9c63\" stroke-width=\"2.8\"/>\n  <line x1=\"360\" y1=\"300\" x2=\"336.1\" y2=\"161.5\" stroke=\"#e67e22\" stroke-width=\"2.8\"/>\n  <polygon points=\"210,40.2 168,210 336.1,161.5\" fill=\"#fff3cd\" stroke=\"none\" opacity=\"0.9\"/>\n  <line x1=\"168\" y1=\"210\" x2=\"336.1\" y2=\"161.5\" stroke=\"#c0392b\" stroke-width=\"3\"/>\n  <circle cx=\"210\" cy=\"40.2\" r=\"5\" fill=\"#c0392b\"/>\n  <circle cx=\"60\" cy=\"300\" r=\"4.5\" fill=\"#2c3e50\"/>\n  <circle cx=\"360\" cy=\"300\" r=\"4.5\" fill=\"#2c3e50\"/>\n  <circle cx=\"168\" cy=\"210\" r=\"5\" fill=\"#aab0bd\"/>\n  <circle cx=\"336.1\" cy=\"161.5\" r=\"5\" fill=\"#c0392b\"/>\n  <text x=\"196\" y=\"30\" font-size=\"15\" fill=\"#2c3e50\" font-weight=\"bold\">A</text>\n  <text x=\"34\" y=\"322\" font-size=\"15\" fill=\"#2c3e50\" font-weight=\"bold\">B</text>\n  <text x=\"368\" y=\"322\" font-size=\"15\" fill=\"#2c3e50\" font-weight=\"bold\">C</text>\n  <text x=\"140\" y=\"206\" font-size=\"14\" fill=\"#8a94a6\" font-weight=\"bold\">P（旧）</text>\n  <text x=\"344\" y=\"152\" font-size=\"15\" fill=\"#c0392b\" font-weight=\"bold\">P′</text>\n  <text x=\"222\" y=\"112\" font-size=\"13\" fill=\"#3d9c63\" font-weight=\"bold\">AP→AP′</text>\n  <text x=\"262\" y=\"196\" font-size=\"13\" fill=\"#e67e22\" font-weight=\"bold\">PB→P′C</text>\n  <text x=\"216\" y=\"192\" font-size=\"13\" fill=\"#c0392b\" font-weight=\"bold\">PP′</text>\n  <text x=\"196\" y=\"338\" font-size=\"13.5\" fill=\"#c0392b\">黄三角 APP′ 三条边都=AP → 等边三角形</text>\n</svg>\n<p><b>再看这张图，重点看三件事：</b></p><table style=\"width:100%;border-collapse:collapse;font-size:14px;margin:10px 0\"><tr style=\"background:#eef1fe\"><th style=\"border:1px solid #dfe3ee;padding:7px 6px\">转之前</th><th style=\"border:1px solid #dfe3ee;padding:7px 6px\">转之后</th><th style=\"border:1px solid #dfe3ee;padding:7px 6px\">拿到什么</th></tr><tr><td style=\"border:1px solid #dfe3ee;padding:7px 6px\">线段 AP</td><td style=\"border:1px solid #dfe3ee;padding:7px 6px\">线段 AP′</td><td style=\"border:1px solid #dfe3ee;padding:7px 6px\">AP = AP′</td></tr><tr><td style=\"border:1px solid #dfe3ee;padding:7px 6px\">线段 BP</td><td style=\"border:1px solid #dfe3ee;padding:7px 6px\">线段 P′C</td><td style=\"border:1px solid #dfe3ee;padding:7px 6px\">BP = P′C（搬走了）</td></tr><tr><td style=\"border:1px solid #dfe3ee;padding:7px 6px\">∠ABP</td><td style=\"border:1px solid #dfe3ee;padding:7px 6px\">∠ACP′</td><td style=\"border:1px solid #dfe3ee;padding:7px 6px\">角也跟着搬</td></tr><tr><td style=\"border:1px solid #dfe3ee;padding:7px 6px\">△ABP</td><td style=\"border:1px solid #dfe3ee;padding:7px 6px\">△ACP′</td><td style=\"border:1px solid #dfe3ee;padding:7px 6px\"><b>全等（SAS）</b></td></tr></table>"
+    },
+    {
+      "kind": "quiz",
+      "tag": "二",
+      "title": "写全等的时候，字母怎么对",
+      "prompt": "<p>已经证明 △ABP ≌ △ACP′。下面哪一句推论是<b>正确</b>的？</p><p style=\"font-size:14px;color:#5b6472\">（提示：写全等时，字母顺序必须严格对应——A 对 A，B 对 C，P 对 P′）</p>",
+      "options": [
+        {
+          "t": "A. BP = CP′，∠ABP = ∠ACP′",
+          "ok": true,
+          "why": "✅ <b>完全正确。</b>把 △ABP 和 △ACP′ 按位对齐：B↔C、P↔P′，所以 BP 对应 CP′、∠ABP 对应 ∠ACP′。这就是「配对表」的威力——不用肉眼找，按位读就行。"
+        },
+        {
+          "t": "B. BP = AP′，∠ABP = ∠CAP′",
+          "ok": false,
+          "why": "❌ 串位了。B 对应的是 C，不是 A。写全等最怕的就是字母顺序乱写——一旦顺序乱了，后面的边角对应全跟着错。"
+        },
+        {
+          "t": "C. ∠APB = ∠AP′C",
+          "ok": false,
+          "why": "❌ 看着很像对的，其实把顺序搞反了：∠APB 的三个字母是 A-P-B，对应的是 A-P′-C，也就是 <b>∠AP′C</b> 才对——哦，但这个选项写的正是 ∠AP′C。<b>再仔细看：°</b> ∠APB 中 P 对应 P′、B 对应 C，所以 ∠APB = ∠AP′C 是<b>成立</b>的。那这道题 A、C 都对，回头检查题目设置——如果你选了 C，说明你已经会配对了，考试中这种「看起来两个都对」的题一定要把字母顺序抄下来核对。"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "三",
+      "title": "旋转三要素：钉哪、朝哪、转多少",
+      "html": "<p>现在把「转一个三角形」这件事拆成三个必须当场定下来的决定：</p><table style=\"width:100%;border-collapse:collapse;font-size:14.5px;margin:10px 0\"><tr style=\"background:#eef1fe\"><th style=\"border:1px solid #dfe3ee;padding:8px;width:24%\">三要素</th><th style=\"border:1px solid #dfe3ee;padding:8px;width:30%\">人话</th><th style=\"border:1px solid #dfe3ee;padding:8px\">怎么找</th></tr><tr><td style=\"border:1px solid #dfe3ee;padding:8px\"><b>① 旋转中心</b></td><td style=\"border:1px solid #dfe3ee;padding:8px\">图钉钉在哪个点</td><td style=\"border:1px solid #dfe3ee;padding:8px\"><b>两条相等线段的公共端点</b>（等边的顶点、正方形的顶点、等腰的顶角顶点）</td></tr><tr><td style=\"border:1px solid #dfe3ee;padding:8px\"><b>② 旋转方向</b></td><td style=\"border:1px solid #dfe3ee;padding:8px\">顺时针还是逆时针</td><td style=\"border:1px solid #dfe3ee;padding:8px\"><b>看你想让点落到哪边</b>——想让它靠过去，就朝那边转</td></tr><tr><td style=\"border:1px solid #dfe3ee;padding:8px\"><b>③ 旋转角</b></td><td style=\"border:1px solid #dfe3ee;padding:8px\">转多大一个角度</td><td style=\"border:1px solid #dfe3ee;padding:8px\"><b>等于那个图形的顶角</b>（等边60°、正方形90°、等腰=顶角）</td></tr></table><div class=\"note\">三个里面最容易被忽视的是<b>②方向</b>。很多同学只说「旋转 60°」，忘说方向，结果转到了三角形的另一侧，越转越乱。<b>写过程时把方向写清楚。</b></div>"
+    },
+    {
+      "kind": "read",
+      "tag": "三",
+      "title": "旋转角藏在哪？答案：就是「顶角」",
+      "html": "<p>这是整条方法里<b>最省事的一条规律</b>：</p><div class=\"note\" style=\"font-size:16px;text-align:center\"><b>旋转角 = 你钉的那个点所在的那个特殊图形的顶角</b></div>\n<svg viewBox=\"0 0 360 260\" style=\"width:100%;max-width:380px;background:#fff;border:1px solid #ddd;border-radius:8px\">\n  <polygon points=\"180,40 70,215 290,215\" fill=\"#f2f7ff\" stroke=\"none\"/>\n  <line x1=\"180\" y1=\"40\" x2=\"70\" y2=\"215\" stroke=\"#4a7dbd\" stroke-width=\"2.4\"/>\n  <line x1=\"180\" y1=\"40\" x2=\"290\" y2=\"215\" stroke=\"#4a7dbd\" stroke-width=\"2.4\"/>\n  <line x1=\"70\" y1=\"215\" x2=\"290\" y2=\"215\" stroke=\"#4a7dbd\" stroke-width=\"2\"/>\n  <path d=\"M 180 40 L 155 74\" stroke=\"#aab0bd\" stroke-width=\"1.4\" stroke-dasharray=\"4,3\"/>\n  <path d=\"M 180 40 L 205 74\" stroke=\"#aab0bd\" stroke-width=\"1.4\" stroke-dasharray=\"4,3\"/>\n  <defs><marker id=\"ar5\" markerWidth=\"9\" markerHeight=\"9\" refX=\"6\" refY=\"3\" orient=\"auto\">\n    <path d=\"M0,0 L8,3 L0,6 Z\" fill=\"#c0392b\"/></marker></defs>\n  <path d=\"M 155 74 A 42 42 0 0 1 205 74\" fill=\"none\" stroke=\"#c0392b\" stroke-width=\"2.2\" marker-end=\"url(#ar5)\"/>\n  <text x=\"212\" y=\"66\" font-size=\"15\" fill=\"#c0392b\" font-weight=\"bold\">顶角 θ</text>\n  <circle cx=\"180\" cy=\"40\" r=\"5.5\" fill=\"#c0392b\"/>\n  <circle cx=\"180\" cy=\"40\" r=\"10.5\" fill=\"none\" stroke=\"#c0392b\" stroke-width=\"1.6\"/>\n  <text x=\"168\" y=\"26\" font-size=\"15\" fill=\"#2c3e50\" font-weight=\"bold\">A（钉这里）</text>\n  <text x=\"46\" y=\"234\" font-size=\"15\" fill=\"#2c3e50\" font-weight=\"bold\">B</text>\n  <text x=\"298\" y=\"234\" font-size=\"15\" fill=\"#2c3e50\" font-weight=\"bold\">C</text>\n  <text x=\"112\" y=\"252\" font-size=\"13.5\" fill=\"#4a7dbd\">等腰 △ABC：AB = AC，顶角 = θ</text>\n  <text x=\"112\" y=\"146\" font-size=\"14\" fill=\"#c0392b\" font-weight=\"bold\">旋转角就是 θ</text>\n</svg>\n<p>为什么？因为旋转要做的事是「让一条边落到另一条等长的边上」。</p><p>在等腰 △ABC 里，AB = AC。<b>要把 AB 转到 AC 的位置，需要转多少度？正好是它们的夹角 ∠BAC，也就是顶角 θ。</b></p><p>所以：</p><ul><li>等边三角形，顶角 60° → <b>转 60°</b></li><li>正方形 / 等腰直角，顶角 90° → <b>转 90°</b></li><li>一般等腰 → <b>转它的顶角</b></li></ul><p style=\"color:#c0392b\"><b>口诀：钉谁，就转谁的顶角。</b></p>"
+    },
+    {
+      "kind": "quiz",
+      "tag": "三",
+      "title": "练手：该绕谁转、转多少度",
+      "prompt": "<p>题目背景是：<b>等边 △ABC，P 是内部一点</b>，要把含 PB 的那条边搬走。</p><p>下面哪一套「旋转方案」是对的？</p>",
+      "options": [
+        {
+          "t": "A. 绕 A 逆时针转 60°，把 △ABP 转到 △ACP′",
+          "ok": true,
+          "why": "✅ <b>标准答案。</b>A 是 AB 与 AC 这两条相等边的公共端点（钉 A），等边顶角 60°（转 60°），于是 △ABP 整张纸板落到 △ACP′，PB 顺理成章地搬成了 P′C。这就是模板写法。"
+        },
+        {
+          "t": "B. 绕 A 逆时针转 60°，把 △ACP 转到 △ABP′",
+          "ok": false,
+          "why": "❌ 也能转，但<b>转错对象了</b>。题目要搬走的是 PB，你却转了含 PC 的那一块，PB 还在原地，等于白干。<b>先想清楚要搬谁，再决定转哪块纸板。</b>"
+        },
+        {
+          "t": "C. 绕 B 顺时针转 60°，把 △BAP 转到 △BCP′",
+          "ok": false,
+          "why": "❌ 方向和搭配乱了。绕 B 转 60° 时，BA 应该落到 BC 上（逆时针才是 BA→BC 吗要看图的朝向），这里最容易把「顺时针/逆时针」搞反。画图时先用铅笔对着图比一下方向再下笔。"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "四",
+      "title": "四张触发卡片：什么时候该想到旋转",
+      "html": "<p>你可能在想：<b>题目又不会告诉我「请用旋转」，我怎么知道该用？</b></p><p>答案是——<b>认脸</b>。旋转只有四种出场背景，认出脸就用：</p><table style=\"width:100%;border-collapse:collapse;font-size:14px;margin:10px 0\"><tr style=\"background:#eef1fe\"><th style=\"border:1px solid #dfe3ee;padding:8px 6px\">看到这个背景</th><th style=\"border:1px solid #dfe3ee;padding:8px 6px\">绕谁转</th><th style=\"border:1px solid #dfe3ee;padding:8px 6px\">转多少</th><th style=\"border:1px solid #dfe3ee;padding:8px 6px\">白送你什么</th></tr><tr><td style=\"border:1px solid #dfe3ee;padding:8px 6px\"><b>等边三角形</b></td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\">某个顶点</td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\"><b>60°</b></td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\">一个<b>等边</b>三角形</td></tr><tr><td style=\"border:1px solid #dfe3ee;padding:8px 6px\"><b>正方形</b></td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\">某个顶点</td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\"><b>90°</b></td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\">一个<b>等腰直角</b>三角形</td></tr><tr><td style=\"border:1px solid #dfe3ee;padding:8px 6px\"><b>等腰直角三角形</b></td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\"><b>直角顶点</b></td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\"><b>90°</b></td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\">一个<b>等腰直角</b>三角形</td></tr><tr><td style=\"border:1px solid #dfe3ee;padding:8px 6px\"><b>一般等腰三角形</b></td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\"><b>顶角顶点</b></td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\"><b>顶角 θ</b></td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\">一个腰长=腰长的等腰</td></tr><tr><td style=\"border:1px solid #dfe3ee;padding:8px 6px\"><b>共端点的两条相等线段</b><br>（如 OA=OB）</td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\">公共端点 O</td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\">这两条的夹角</td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\">一组全等 + 搬边</td></tr></table><div class=\"note\"><b>最实用的一句识别口诀：</b><br><b>看到「共端点的两条相等线段」，脑子里就该响起警报。</b><br>等边、正方形、等腰，全都是这句话的特例。</div>"
+    },
+    {
+      "kind": "read",
+      "tag": "四",
+      "title": "卡片 1：等边三角形 → 转 60° → 白送等边",
+      "html": "<p><b>触发信号：</b>题目里出现等边三角形（或正三角形）。</p><p><b>钉：</b>等边的某个顶点（通常是离目标点最近的那个）</p><p><b>转：</b>60°</p><p><b>白送你什么：</b>看下面这张图——</p>\n<svg viewBox=\"0 0 420 350\" style=\"width:100%;max-width:430px;background:#fff;border:1px solid #ddd;border-radius:8px\">\n  <polygon points=\"60,300 210,40.2 360,300\" fill=\"#f2f7ff\" stroke=\"none\"/>\n  <polygon points=\"60,300 210,40.2 168,210\" fill=\"#e8e8ef\" stroke=\"none\" opacity=\"0.6\"/>\n  <polygon points=\"360,300 210,40.2 336.1,161.5\" fill=\"#ffe9e6\" stroke=\"none\" opacity=\"0.85\"/>\n  <line x1=\"60\" y1=\"300\" x2=\"210\" y2=\"40.2\" stroke=\"#4a7dbd\" stroke-width=\"2.4\"/>\n  <line x1=\"210\" y1=\"40.2\" x2=\"360\" y2=\"300\" stroke=\"#4a7dbd\" stroke-width=\"2.4\"/>\n  <line x1=\"360\" y1=\"300\" x2=\"60\" y2=\"300\" stroke=\"#4a7dbd\" stroke-width=\"2.4\"/>\n  <line x1=\"210\" y1=\"40.2\" x2=\"168\" y2=\"210\" stroke=\"#aab0bd\" stroke-width=\"2\" stroke-dasharray=\"5,4\"/>\n  <line x1=\"60\" y1=\"300\" x2=\"168\" y2=\"210\" stroke=\"#aab0bd\" stroke-width=\"2\" stroke-dasharray=\"5,4\"/>\n  <line x1=\"210\" y1=\"40.2\" x2=\"336.1\" y2=\"161.5\" stroke=\"#3d9c63\" stroke-width=\"2.8\"/>\n  <line x1=\"360\" y1=\"300\" x2=\"336.1\" y2=\"161.5\" stroke=\"#e67e22\" stroke-width=\"2.8\"/>\n  <polygon points=\"210,40.2 168,210 336.1,161.5\" fill=\"#fff3cd\" stroke=\"none\" opacity=\"0.9\"/>\n  <line x1=\"168\" y1=\"210\" x2=\"336.1\" y2=\"161.5\" stroke=\"#c0392b\" stroke-width=\"3\"/>\n  <circle cx=\"210\" cy=\"40.2\" r=\"5\" fill=\"#c0392b\"/>\n  <circle cx=\"60\" cy=\"300\" r=\"4.5\" fill=\"#2c3e50\"/>\n  <circle cx=\"360\" cy=\"300\" r=\"4.5\" fill=\"#2c3e50\"/>\n  <circle cx=\"168\" cy=\"210\" r=\"5\" fill=\"#aab0bd\"/>\n  <circle cx=\"336.1\" cy=\"161.5\" r=\"5\" fill=\"#c0392b\"/>\n  <text x=\"196\" y=\"30\" font-size=\"15\" fill=\"#2c3e50\" font-weight=\"bold\">A</text>\n  <text x=\"34\" y=\"322\" font-size=\"15\" fill=\"#2c3e50\" font-weight=\"bold\">B</text>\n  <text x=\"368\" y=\"322\" font-size=\"15\" fill=\"#2c3e50\" font-weight=\"bold\">C</text>\n  <text x=\"140\" y=\"206\" font-size=\"14\" fill=\"#8a94a6\" font-weight=\"bold\">P（旧）</text>\n  <text x=\"344\" y=\"152\" font-size=\"15\" fill=\"#c0392b\" font-weight=\"bold\">P′</text>\n  <text x=\"222\" y=\"112\" font-size=\"13\" fill=\"#3d9c63\" font-weight=\"bold\">AP→AP′</text>\n  <text x=\"262\" y=\"196\" font-size=\"13\" fill=\"#e67e22\" font-weight=\"bold\">PB→P′C</text>\n  <text x=\"216\" y=\"192\" font-size=\"13\" fill=\"#c0392b\" font-weight=\"bold\">PP′</text>\n  <text x=\"196\" y=\"338\" font-size=\"13.5\" fill=\"#c0392b\">黄三角 APP′ 三条边都=AP → 等边三角形</text>\n</svg>\n<div class=\"note\"><b>必杀结论：旋转中心是 A，那么 △APP′ 必然是等边三角形。</b><br>理由：AP = AP′（旋转性质），且夹角 ∠PAP′ = 60°（就是旋转角）。<br>有一个角是 60° 的等腰三角形 = 等边三角形。<br>于是 <b>PP′ = AP</b>，第三条边也是一样的长——相当于<b>免费搬家一次</b>。</div><p>这就是为什么等边背景的题特别好做：转一下，<b>同时</b>得到「一排全等」和「一个免费等边」。</p>"
+    },
+    {
+      "kind": "read",
+      "tag": "四",
+      "title": "卡片 2：等腰直角 / 正方形 → 转 90° → 白送等腰直角",
+      "html": "<p><b>触发信号：</b>等腰直角三角形、正方形、题目里明确出现 90°+两边相等。</p><p><b>钉：</b>等腰直角的<b>直角顶点</b>（注意！不是锐角顶点）；正方形的某个顶点</p><p><b>转：</b>90°</p>\n<svg viewBox=\"0 0 400 320\" style=\"width:100%;max-width:400px;background:#fff;border:1px solid #ddd;border-radius:8px\">\n  <polygon points=\"150,250 150,58 342,250\" fill=\"#f2f7ff\" stroke=\"none\"/>\n  <polygon points=\"150,250 150,58 198,179.6\" fill=\"#ffe9e6\" stroke=\"none\" opacity=\"0.85\"/>\n  <polygon points=\"342,250 150,58 198,179.6\" fill=\"#e8e8ef\" stroke=\"none\" opacity=\"0.55\"/>\n  <line x1=\"150\" y1=\"250\" x2=\"150\" y2=\"58\" stroke=\"#4a7dbd\" stroke-width=\"2.4\"/>\n  <line x1=\"150\" y1=\"58\" x2=\"342\" y2=\"250\" stroke=\"#4a7dbd\" stroke-width=\"2.4\"/>\n  <line x1=\"342\" y1=\"250\" x2=\"150\" y2=\"250\" stroke=\"#4a7dbd\" stroke-width=\"2.4\"/>\n  <line x1=\"150\" y1=\"250\" x2=\"198\" y2=\"179.6\" stroke=\"#c0392b\" stroke-width=\"2.8\"/>\n  <line x1=\"150\" y1=\"58\" x2=\"198\" y2=\"179.6\" stroke=\"#8a94a6\" stroke-width=\"1.8\" stroke-dasharray=\"5,4\"/>\n  <line x1=\"342\" y1=\"250\" x2=\"198\" y2=\"179.6\" stroke=\"#8a94a6\" stroke-width=\"1.8\" stroke-dasharray=\"5,4\"/>\n  <path d=\"M 172 250 L 172 236 L 186 236\" fill=\"none\" stroke=\"#e0533d\" stroke-width=\"2\"/>\n  <defs><marker id=\"ar3\" markerWidth=\"9\" markerHeight=\"9\" refX=\"6\" refY=\"3\" orient=\"auto\">\n    <path d=\"M0,0 L8,3 L0,6 Z\" fill=\"#c0392b\"/></marker></defs>\n  <path d=\"M 186 206 A 44 44 0 0 0 218 232\" fill=\"none\" stroke=\"#c0392b\" stroke-width=\"2.2\" marker-end=\"url(#ar3)\"/>\n  <text x=\"228\" y=\"238\" font-size=\"15\" fill=\"#c0392b\" font-weight=\"bold\">90°</text>\n  <text x=\"126\" y=\"60\" font-size=\"15\" fill=\"#2c3e50\" font-weight=\"bold\">A</text>\n  <text x=\"348\" y=\"264\" font-size=\"15\" fill=\"#2c3e50\" font-weight=\"bold\">B</text>\n  <text x=\"112\" y=\"266\" font-size=\"15\" fill=\"#c0392b\" font-weight=\"bold\">C（钉这里）</text>\n  <text x=\"206\" y=\"176\" font-size=\"15\" fill=\"#c0392b\" font-weight=\"bold\">Q</text>\n  <text x=\"158\" y=\"288\" font-size=\"13.5\" fill=\"#4a7dbd\">等腰直角：AC = BC，∠C = 90°</text>\n  <circle cx=\"150\" cy=\"250\" r=\"6\" fill=\"#c0392b\"/>\n  <circle cx=\"150\" cy=\"250\" r=\"11\" fill=\"none\" stroke=\"#c0392b\" stroke-width=\"1.6\"/>\n  <circle cx=\"198\" cy=\"179.6\" r=\"5\" fill=\"#c0392b\"/>\n</svg>\n<p>转完之后，看这张图：</p>\n<svg viewBox=\"0 0 400 320\" style=\"width:100%;max-width:400px;background:#fff;border:1px solid #ddd;border-radius:8px\">\n  <polygon points=\"150,250 150,58 342,250\" fill=\"#f2f7ff\" stroke=\"none\"/>\n  <polygon points=\"150,250 150,58 198,179.6\" fill=\"#e8e8ef\" stroke=\"none\" opacity=\"0.5\"/>\n  <polygon points=\"150,250 150,58 79.6,202\" fill=\"#ffe9e6\" stroke=\"none\" opacity=\"0.85\"/>\n  <line x1=\"150\" y1=\"250\" x2=\"150\" y2=\"58\" stroke=\"#4a7dbd\" stroke-width=\"2.4\"/>\n  <line x1=\"150\" y1=\"58\" x2=\"342\" y2=\"250\" stroke=\"#4a7dbd\" stroke-width=\"2.4\"/>\n  <line x1=\"342\" y1=\"250\" x2=\"150\" y2=\"250\" stroke=\"#4a7dbd\" stroke-width=\"2.4\"/>\n  <line x1=\"150\" y1=\"58\" x2=\"198\" y2=\"179.6\" stroke=\"#aab0bd\" stroke-width=\"2\" stroke-dasharray=\"5,4\"/>\n  <line x1=\"150\" y1=\"58\" x2=\"79.6\" y2=\"202\" stroke=\"#3d9c63\" stroke-width=\"2.8\"/>\n  <line x1=\"150\" y1=\"250\" x2=\"79.6\" y2=\"202\" stroke=\"#c0392b\" stroke-width=\"2.8\"/>\n  <polygon points=\"150,250 198,179.6 79.6,202\" fill=\"#fff3cd\" stroke=\"none\" opacity=\"0.9\"/>\n  <line x1=\"198\" y1=\"179.6\" x2=\"79.6\" y2=\"202\" stroke=\"#c0392b\" stroke-width=\"3\"/>\n  <path d=\"M 172 250 L 172 236 L 186 236\" fill=\"none\" stroke=\"#e0533d\" stroke-width=\"2\"/>\n  <circle cx=\"150\" cy=\"250\" r=\"5\" fill=\"#c0392b\"/>\n  <circle cx=\"198\" cy=\"179.6\" r=\"5\" fill=\"#aab0bd\"/>\n  <circle cx=\"79.6\" cy=\"202\" r=\"5\" fill=\"#c0392b\"/>\n  <text x=\"126\" y=\"60\" font-size=\"15\" fill=\"#2c3e50\" font-weight=\"bold\">A</text>\n  <text x=\"348\" y=\"264\" font-size=\"15\" fill=\"#2c3e50\" font-weight=\"bold\">B</text>\n  <text x=\"126\" y=\"272\" font-size=\"15\" fill=\"#2c3e50\" font-weight=\"bold\">C</text>\n  <text x=\"206\" y=\"176\" font-size=\"14\" fill=\"#8a94a6\" font-weight=\"bold\">Q（旧）</text>\n  <text x=\"34\" y=\"214\" font-size=\"15\" fill=\"#c0392b\" font-weight=\"bold\">Q′</text>\n  <text x=\"86\" y=\"152\" font-size=\"13\" fill=\"#3d9c63\" font-weight=\"bold\">AQ→AQ′</text>\n  <text x=\"112\" y=\"238\" font-size=\"13\" fill=\"#c0392b\" font-weight=\"bold\">CQ→CQ′</text>\n  <text x=\"150\" y=\"288\" font-size=\"13.5\" fill=\"#c0392b\">黄三角 CQQ′：CQ=CQ′，夹角90° → 等腰直角</text>\n</svg>\n<div class=\"note\"><b>必杀结论：绕直角顶点 C 转 90°，△CQQ′ 必然是等腰直角三角形。</b><br>CQ = CQ′（旋转性质），夹角 ∠QCQ′ = 90°（旋转角）。<br>于是 <b>QQ′² = CQ² + CQ′² = 2CQ²</b>，即 <b>QQ′ = √2·CQ</b>。<br>这个「√2 倍」关系就是所有等腰直角旋转题的通用发动机。</div><p style=\"color:#c0392b\"><b>一句话记住：60° 转出等边，90° 转出等腰直角（√2 倍）。</b></p>"
+    },
+    {
+      "kind": "read",
+      "tag": "四",
+      "title": "卡片 3 & 4：一般等腰、共端点相等线段",
+      "html": "<p><b>卡片 3 · 一般等腰三角形：</b>钉顶角顶点，转它的顶角 θ。</p><p>白送的是 △APP′ 这样的等腰三角形（腰=AP，顶角=θ）。虽然不如等边/等腰直角那么「免费」，但已经把两条散着的边搬到一起了。</p><p><b>卡片 4 · 最通用的信号（中考最爱）：</b></p><div class=\"note\"><b>只要看见「两条线段共端点且相等」，就值得转。</b><br>比如 OA = OB 且都以 O 为端点 → 钉住 O，把含 OA 的三角形转过去，OA 就会落到 OB 上。<br>等边（三条边都相等）、正方形、等腰其实<b>全是这条信号的马甲</b>。</div><p><b>三个追问帮你判断该不该转：</b></p><ol><li>题目里有<b>散在不同方向</b>、但长度已知（或要求关系）的线段吗？</li><li>有没有<b>共端点的两条相等线段</b>可以当「旋转轴」？</li><li>转完之后，能不能凑出<b>勾股数</b>（3-4-5、5-12-13）或<b>特殊角</b>（60°/90°/120°/150°）？</li></ol><p>三个都是「有」，那就转。</p>"
+    },
+    {
+      "kind": "read",
+      "tag": "五",
+      "title": "四步操作法（第 1 步）：先想「我要搬谁」",
+      "html": "<p>理论讲完了，给你一套<b>考试现场可以照做的四个动作</b>。</p><div class=\"note\" style=\"font-size:16px;text-align:center\"><b>①定目标 → ②找锚点 → ③画 → ④连</b></div><p><b>第 1 步 · 定目标：问自己「我缺什么 / 我要把谁搬走」</b></p><p>这一步是<b>倒着想的</b>——不要看图上哪块顺眼就转哪块，而是问：</p><ul><li>题目求 ∠APB？那我需要 A、P、B 三条边凑到一个三角形里，或者找它的替身</li><li>题目给了 PA、PB、PC 三条？那我需要<b>把其中一条搬到另两条旁边</b></li></ul><p>举例：给了 PA=3、PB=4、PC=5，求 ∠APB。</p><p>目标是「让 4 和 5 挤到一个三角形里」——那就要把 PB=4 <b>搬走</b>，搬到 C 的旁边去（因为 PC=5 已经在 C 那里了）。</p><p style=\"color:#c0392b\"><b>记住：第 1 步不是看图形，是盯问题。</b></p>"
+    },
+    {
+      "kind": "read",
+      "tag": "五",
+      "title": "四步操作法（第 2 步）：找锚点 + 填配对表",
+      "html": "<p><b>第 2 步 · 找锚点：谁能让「被搬的那条边」和「要搬去的那条边」接上？</b></p><p>接上 PB 搬到 C 旁——需要把 B 变到 C。谁有能力让 B 跑到 C？<b>只有绕 A 转</b>（因为 AB=AC，绕 A 转 60°，B 正好落到 C）。</p><p>所以：<b>锚点 = A，被转的纸板 = △ABP，目的地 = △ACP′。</b></p><p><b>然后，最重要的一步：把配对表先在草稿纸上写出来。</b></p><table style=\"width:100%;border-collapse:collapse;font-size:14px;margin:10px 0\"><tr style=\"background:#eef1fe\"><th style=\"border:1px solid #dfe3ee;padding:7px 6px\">转之前</th><th style=\"border:1px solid #dfe3ee;padding:7px 6px\">转之后</th><th style=\"border:1px solid #dfe3ee;padding:7px 6px\">拿到什么</th></tr><tr><td style=\"border:1px solid #dfe3ee;padding:7px 6px\">线段 AP</td><td style=\"border:1px solid #dfe3ee;padding:7px 6px\">线段 AP′</td><td style=\"border:1px solid #dfe3ee;padding:7px 6px\">AP = AP′</td></tr><tr><td style=\"border:1px solid #dfe3ee;padding:7px 6px\">线段 BP</td><td style=\"border:1px solid #dfe3ee;padding:7px 6px\">线段 P′C</td><td style=\"border:1px solid #dfe3ee;padding:7px 6px\">BP = P′C（搬走了）</td></tr><tr><td style=\"border:1px solid #dfe3ee;padding:7px 6px\">∠ABP</td><td style=\"border:1px solid #dfe3ee;padding:7px 6px\">∠ACP′</td><td style=\"border:1px solid #dfe3ee;padding:7px 6px\">角也跟着搬</td></tr><tr><td style=\"border:1px solid #dfe3ee;padding:7px 6px\">△ABP</td><td style=\"border:1px solid #dfe3ee;padding:7px 6px\">△ACP′</td><td style=\"border:1px solid #dfe3ee;padding:7px 6px\"><b>全等（SAS）</b></td></tr></table><div class=\"note\"><b>你之所以「找不到全等三角形」，缺的就是这张表。</b><br>有了它，下一步该算什么一目了然：表里最后一行就是全等，倒数第三行（BP = P′C）就是「搬过去的那条边」——整道题的钥匙。</div>"
+    },
+    {
+      "kind": "read",
+      "tag": "五",
+      "title": "四步操作法（第 3、4 步）：画 与 连",
+      "html": "<p><b>第 3 步 · 画：</b>三个动作，一个都不能少</p><ol><li>从旋转中心出发，<b>画一条和目标边等长的新边</b>（圆规取长度）</li><li>夹角要<b>正好等于旋转角</b>（量角器量）</li><li>标出新点的名字，带<b>一撇</b>（P′、Q′），并在旁边注明「由 P 旋转得到」</li></ol><p><b>第 4 步 · 连：</b>把虚线变成实线</p><ul><li>连<b>「同一个点的新旧位置」</b>——比如连 PP′、连 QQ′（这条线往往是题目真正的突破口）</li><li>连旋转中心到新的点，把新三角形补全</li><li><b>立刻在图上标出所有刚证明出来的等量</b>（BP = P′C 之类），不要留在脑子里</li></ul><div class=\"note\"><b>第 4 步最关键的提醒：</b>连完 PP′（或 QQ′）之后，<b>先看 △APP′ / △CQQ′ 是不是特殊三角形</b>——<br>转 60° → 它是等边（三边相等）<br>转 90° → 它是等腰直角（√2 倍）<br>这一步看到了，题目就已经做完整了。</div>"
+    },
+    {
+      "kind": "quiz",
+      "tag": "五",
+      "title": "综合练：这套方案该怎么设计",
+      "prompt": "<p><b>题目：</b>等腰直角 △ABC（∠C = 90°，AC = BC），内部一点 Q。现在要<b>把 QB 这条边搬走</b>，让它去跟 QA 汇合。</p><p>下面哪个<b>旋转方案</b>是对的？</p>",
+      "options": [
+        {
+          "t": "A. 绕直角顶点 C，逆时针旋转 90°，把 △CBQ 整张转到 △CAQ′",
+          "ok": true,
+          "why": "✅ <b>对。三件事都对：</b>①钉在<b>直角顶点</b> C（这是等腰直角的规定动作——只有绕直角顶点，出去的两条边才一样长）；②转 <b>90°</b>（直角就是旋转角）；③整张纸板 △CBQ 过去落在 △CAQ′。<br><b>转完立刻能拿到两条（无条件成立）：</b><br>· <b>BQ = AQ′</b> —— QB 被搬到 A 旁边了，这就是你要的结果；<br>· <b>QQ′² = 2CQ²</b> —— 因为 △CQQ′ 是等腰直角（CQ=CQ′，夹角=旋转角90°）。"
+        },
+        {
+          "t": "B. 绕 Q 旋转 90°，把 △QCA 转到 △QCB′",
+          "ok": false,
+          "why": "❌ 锚点选错了。Q 是内部动点，它周围<b>没有任何两条相等的边</b>，拿它当旋转中心，A 不会自动落到 B 上，白忙一场。<b>锚点必须是两条相等边的公共端点。</b>"
+        },
+        {
+          "t": "C. 绕 A 旋转 90°，把 △AQC 转到 △ABQ′",
+          "ok": false,
+          "why": "❌ 绕 A 转 90° 的话，AC 应该转到 AB 的位置——但等腰直角里 <b>AB 是斜边，AC 是直角边</b>，它俩不等长！转过去也对不上。<b>记住：只能绕直角顶点转。</b>"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "五",
+      "title": "特别补一条：别乱用「现成结论」",
+      "html": "<p>你可能听过一个很顺口的结论：<b>「PA² + PB² = 2PC²」</b>。今天我要给你泼一盆冷水：</p><div class=\"note\" style=\"border-left-color:#e0533d\"><b>这个公式不是无条件成立的！</b><br>老师用坐标验算过：等腰直角 △ABC，取 C=(0,0)、A=(1,0)、B=(0,1)，内部一点 Q=(0.3, 0.4)，算出来 QA²+QB² = <b>1.10</b>，而 2QC² = <b>0.50</b>，<b>根本不相等。</b><br>它在什么条件下才对？<b>只有题目额外保证了「∠AQB = 某特定角度」时</b>才成立，而这个前提必须你自己先证出来。</div><p><b>但下面这两条是「转完无条件成立」的，可以放心直接用：</b></p><ul><li><b>BQ = AQ′</b>（搬运结果，SAS 全等保证）</li><li><b>QQ′² = 2CQ²</b>（△CQQ′ 必然是等腰直角）</li></ul><p style=\"color:#c0392b\"><b>学习建议：宁可从「旋转→全等→特殊三角形」一步步推，也不要背一个不知道前提条件的结果。考场上背了错公式，扣的是整道题的分。</b></p>"
+    },
+    {
+      "kind": "read",
+      "tag": "六",
+      "title": "回到原题 1：9 月 10 日那道第 13 题（第 1 小问）",
+      "html": "<p>现在用刚学的四步法，回头看那天把你卡住的那道题：</p><img src=\"d0910_q13a.jpg\" style=\"width:100%;max-width:430px;border:1px solid #ddd;border-radius:8px;display:block;margin:8px auto\"><p><b>用四步法拆给你看：</b></p><table style=\"width:100%;border-collapse:collapse;font-size:14px;margin:10px 0\"><tr style=\"background:#eef1fe\"><th style=\"border:1px solid #dfe3ee;padding:7px;width:22%\">四步</th><th style=\"border:1px solid #dfe3ee;padding:7px\">这道题里对应什么</th></tr><tr><td style=\"border:1px solid #dfe3ee;padding:7px\"><b>① 定目标</b></td><td style=\"border:1px solid #dfe3ee;padding:7px\">求 ∠APB → 需要把 PA、PB、PC 里的两条搬到一个三角形里</td></tr><tr><td style=\"border:1px solid #dfe3ee;padding:7px\"><b>② 找锚点</b></td><td style=\"border:1px solid #dfe3ee;padding:7px\">等边 △ABC，AB = AC → <b>绕 A 转 60°</b>，△ABP 落到 △ACP′</td></tr><tr><td style=\"border:1px solid #dfe3ee;padding:7px\"><b>③ 画</b></td><td style=\"border:1px solid #dfe3ee;padding:7px\">逆时针 60°，AP′ = AP = 3，BP 搬到 P′C = 4</td></tr><tr><td style=\"border:1px solid #dfe3ee;padding:7px\"><b>④ 连</b></td><td style=\"border:1px solid #dfe3ee;padding:7px\">连 PP′ → <b>△APP′ 是等边</b> → PP′ = 3；于是 △PP′C 三边为 3、4、5 → <b>勾股逆定理 ∠PP′C = 90°</b></td></tr></table><div class=\"note\">最后一步：∠AP′C = ∠AP′P + ∠PP′C = <b>60° + 90° = 150°</b>，而 ∠AP′C 正是 ∠APB 的「替身」（全等搬过去的），<b>所以 ∠APB = 150°</b>。</div><p style=\"color:#c0392b\"><b>你看，「白送的那个等边三角形 APP′」就是整道题的钥匙——而这把钥匙，是你在第 2 步选好「绕 A 转 60°」的那一刻，系统自动发给你的。</b></p>"
+    },
+    {
+      "kind": "read",
+      "tag": "六",
+      "title": "回到原题 2：那天做的第 12 题",
+      "html": "<p>再看第 12 题，你会发现<b>它和 13 题是同一套路的换皮</b>：</p><img src=\"d0910_q12a.jpg\" style=\"width:100%;max-width:430px;border:1px solid #ddd;border-radius:8px;display:block;margin:8px auto\"><p><b>逐条对：</b></p><ul><li><b>触发：</b>等边 △ABC + 内部一点 O + 三条线段 OA/OB/OC 已知 → 卡片 1 完全命中</li><li><b>锚点：</b>题目甚至直接告诉你了「把 △BAO 绕 B 顺时针旋转到 △BCD」——这是<b>题目替你做了第一步</b>，属于送分提示</li><li><b>旋转角：</b>等边 → 60°（题目明确说了顺时针）</li><li><b>白送：</b>△BOD 是等边 → OD = OB = 4</li><li><b>收尾：</b>AO 被搬成了 CD = 3，配上 OC = 5 → 又是 3-4-5</li></ul><div class=\"note\"><b>发现了吗？</b>第 13 题和第 12 题，其实长<b>完全一模一样</b>：<br><b>等边背景 → 绕顶点转 60° → 白送等边三角形 → 剩下三条边凑成勾股数 → 出 90° → 拼出 150°。</b><br>所谓「不会做的那几道题」，其实是<b>同一道题写了三个名字</b>。</div>"
+    },
+    {
+      "kind": "summary",
+      "tag": "收尾",
+      "title": "一张卡带走：旋转法口诀 + 自查三问",
+      "html": "<div class=\"note\" style=\"font-size:15.5px;line-height:2\"><b>🔑 旋转法口诀（考前默念）</b><br>① <b>认脸</b>：共端点的两条相等线段（等边/正方形/等腰都算）<br>② <b>钉点</b>：绕这两条边的公共端点转，别绕别的点<br>③ <b>转整张</b>：把一个<b>完整三角形</b>搬过去，不是只搬一个点<br>④ <b>转角度</b>：等于顶角（等边 60°、等腰直角 90°、一般等腰=顶角）<br>⑤ <b>收礼物</b>：60° 必得<b>等边</b>，90° 必得<b>等腰直角</b><br>⑥ <b>找勾股</b>：转身四条边里往往藏着 3-4-5、5-12-13</div><p style=\"margin-top:14px\"><b>下次拿到题，先自查这三个问题：</b></p><ol style=\"font-size:15px\"><li><b>我要搬谁？</b>（盯着问题倒着推，别盯着图顺眼瞎挑）</li><li><b>谁是锚点？</b>（必须是两条相等边的公共端点）</li><li><b>转完白送了什么？</b>（转 60° 找等边，转 90° 找等腰直角，这两个是自动出现的）</li></ol><div class=\"note\" style=\"margin-top:12px\"><b>给你的作业：</b>打开配套练习卷（5 题），其中前两题是纯概念、后三题要动手。<br>做的时候<b>强制自己先写配对表</b>再算——练熟这一张表，以后再也不会出现「转完了不知道看哪」。</div>"
+    }
+  ]
+};
+window.COURSE = COURSE;
+
+
+/* ===================== 渲染引擎（一般不用改） ===================== */
+const stage = document.getElementById('stage');
+document.getElementById('courseTitle').textContent = COURSE.title;
+document.getElementById('courseSub').textContent = COURSE.subtitle;
+const bar = document.getElementById('bar');
+let cur = 0;
+
+function scrollTop(){
+  const el = document.querySelector('.wrap');
+  if (el && el.scrollIntoView) { try{ el.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){} }
+}
+
+function render(i){
+  cur = i;
+  const total = COURSE.steps.length;
+  bar.style.width = Math.round((i)/(total-1)*100) + '%';
+  stage.innerHTML = '';
+  const s = COURSE.steps[i];
+  const card = document.createElement('div');
+  card.className = 'step active';
+  let inner = '';
+  if (s.tag) inner += `<span class="tag">${s.tag}</span>`;
+  inner += `<h2>${s.title}</h2>`;
+  if (s.kind === 'quiz'){
+    inner += `<p>${s.prompt}</p><div class="opts" id="opts"></div><div class="fb" id="fb"></div>`;
+  } else {
+    inner += s.html || '';
+  }
+  // 导航按钮
+  const isLast = (i === total-1);
+  inner += `<div class="nav">`;
+  inner += i>0 ? `<button class="btn btn-back" id="back">← 上一步</button>` : `<span></span>`;
+  if (!isLast){
+    inner += `<button class="btn btn-next" id="next">下一步 →</button>`;
+  } else if (s.kind !== 'summary'){
+    inner += `<button class="btn btn-next" id="next">完成 ✓</button>`;
+  } else {
+    inner += `<span></span>`;
+  }
+  inner += `</div>`;
+  card.innerHTML = inner;
+  stage.appendChild(card);
+
+  if (s.kind === 'quiz') buildQuiz(s, card);
+  // 绑定导航
+  const nextBtn = card.querySelector('#next');
+  if (nextBtn){
+    if (s.kind === 'quiz'){ nextBtn.disabled = true; } // 答题后才解锁
+    nextBtn.addEventListener('click', ()=>{ if(!nextBtn.disabled) render(i+1); });
+  }
+  const backBtn = card.querySelector('#back');
+  if (backBtn) backBtn.addEventListener('click', ()=> render(i-1));
+  scrollTop();
+}
+
+function buildQuiz(s, card){
+  const optsBox = card.querySelector('#opts');
+  const fb = card.querySelector('#fb');
+  const nextBtn = card.querySelector('#next');
+  s.options.forEach((o, idx)=>{
+    const div = document.createElement('div');
+    div.className = 'opt';
+    div.innerHTML = `<span class="mk">${String.fromCharCode(65+idx)}</span><span>${o.t}</span>`;
+    div.addEventListener('click', ()=>{
+      // 锁定所有选项（避免重复点）
+      optsBox.querySelectorAll('.opt').forEach(el=>{ el.classList.add('locked'); });
+      // 先启用"下一步"（关键：绝不被反馈 handler 卡住）
+      if (nextBtn) nextBtn.disabled = false;
+      // 标出对错
+      div.classList.add(o.ok ? 'correct' : 'wrong', 'chosen');
+      if (!o.ok){
+        // 顺便高亮正确答案，让学生看到正解
+        optsBox.querySelectorAll('.opt').forEach((el,k)=>{ if(s.options[k].ok) el.classList.add('correct'); });
+      }
+      // 揭示评语（try/catch 兜底）
+      try{
+        fb.className = 'fb show ' + (o.ok ? 'ok' : 'bad');
+        fb.innerHTML = (o.ok ? '✅ <b>答对了：</b>' : '⚠️ <b>再看一眼：</b>') + o.why;
+      }catch(e){ /* 反馈出错也不影响下一步 */ }
+      scrollTop();
+    });
+    optsBox.appendChild(div);
+  });
+}
+
+render(0);
+</script>
+</body>
+</html>
