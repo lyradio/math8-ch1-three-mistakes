@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>苏格拉底互动特训课</title>
+<!--
+  =====================================================================
+  初中数学 · 苏格拉底互动特训课 模板（math-socratic-trainer 技能资产）
+  ---------------------------------------------------------------------
+  怎么用：复制本文件，只改下面的 COURSE 对象即可，不要从零写 HTML。
+
+  已修复的已知坑（详见技能 SKILL.md Pitfalls）：
+    ✅ 原生 CSS，不用 Tailwind @apply
+    ✅ 选项绝不预显示"对/接近/反了"——评语只在点击后揭示
+    ✅ 不用 window['check'+id] 拼函数名，改用数据驱动 + 闭包绑定
+    ✅ 不用 split('-') 解析 dash（旧坑：c1-1 → NaN → 下一步死锁）
+       本模板用"步骤索引"驱动，根本不存在 dash 解析
+    ✅ checkQuiz：先启用"下一步"，再 try/catch 显示反馈——
+       反馈 handler 报错也绝不会卡住下一步
+    ✅ scrollIntoView 带 if 防御（部分 webview 缺该方法）
+  几何/题干图：用 PDF 真实截图 base64 嵌入 <img>，严禁手绘 SVG。
+  =====================================================================
+-->
+<style>
+  :root{
+    --bg:#f6f7fb; --card:#ffffff; --ink:#1f2430; --sub:#5b6472;
+    --line:#e6e9f0; --accent:#4f6ef7; --accent-soft:#eef1fe;
+    --ok:#1f9d6b; --ok-soft:#e7f7ef; --bad:#e0533d; --bad-soft:#fdecea;
+    --warn:#b7791f; --radius:16px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.7;padding:18px}
+  .wrap{max-width:760px;margin:0 auto}
+  .head{background:linear-gradient(135deg,#4f6ef7,#7b5cf0);color:#fff;
+    border-radius:var(--radius);padding:22px 24px;margin-bottom:16px;
+    box-shadow:0 8px 24px rgba(79,110,247,.25)}
+  .head h1{font-size:21px;letter-spacing:.5px}
+  .head p{opacity:.92;margin-top:6px;font-size:14px}
+  .progress{height:8px;background:rgba(255,255,255,.35);border-radius:99px;
+    margin-top:14px;overflow:hidden}
+  .progress>i{display:block;height:100%;width:0;background:#fff;
+    border-radius:99px;transition:width .3s}
+  .step{display:none;background:var(--card);border:1px solid var(--line);
+    border-radius:var(--radius);padding:22px 22px 18px;margin-bottom:14px;
+    box-shadow:0 4px 16px rgba(31,36,48,.05)}
+  .step.active{display:block;animation:fade .35s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .tag{display:inline-block;font-size:12px;font-weight:700;color:var(--accent);
+    background:var(--accent-soft);padding:3px 10px;border-radius:99px;margin-bottom:10px}
+  .step h2{font-size:18px;margin-bottom:12px}
+  .step p,.step li{font-size:15.5px;color:var(--ink)}
+  .step p{margin:8px 0}
+  .step ul,.step ol{margin:8px 0 8px 22px}
+  .step li{margin:5px 0}
+  .note{background:var(--accent-soft);border-left:4px solid var(--accent);
+    padding:10px 14px;border-radius:10px;margin:12px 0;font-size:14.5px;color:#2b3550}
+  .imgbox{margin:14px 0;text-align:center}
+  .imgbox img{max-width:100%;border:1px solid var(--line);border-radius:12px;background:#fff}
+  .opts{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+  .opt{display:flex;align-items:flex-start;gap:10px;cursor:pointer;
+    border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;
+    font-size:15px;transition:.15s;background:#fff}
+  .opt:hover{border-color:var(--accent);background:var(--accent-soft)}
+  .opt .mk{flex:0 0 22px;height:22px;border-radius:50%;border:1.5px solid #c4cad6;
+    display:flex;align-items:center;justify-content:center;font-size:13px;color:#8a93a3;font-weight:700}
+  .opt.chosen{border-color:var(--accent)}
+  .opt.correct{border-color:var(--ok);background:var(--ok-soft)}
+  .opt.wrong{border-color:var(--bad);background:var(--bad-soft)}
+  .opt.locked{cursor:default;pointer-events:none}
+  .fb{margin-top:14px;padding:12px 14px;border-radius:12px;font-size:14.5px;
+    display:none}
+  .fb.show{display:block;animation:fade .3s}
+  .fb.ok{background:var(--ok-soft);border:1px solid #bfe9d3;color:#146b48}
+  .fb.bad{background:var(--bad-soft);border:1px solid #f6c9c0;color:#8f2f20}
+  .fb b{color:inherit}
+  .nav{display:flex;justify-content:space-between;gap:10px;margin-top:18px}
+  .btn{border:none;border-radius:12px;padding:12px 20px;font-size:15px;
+    font-weight:700;cursor:pointer;transition:.15s}
+  .btn-next{background:var(--accent);color:#fff;flex:1}
+  .btn-next:hover{background:#3f5ce8}
+  .btn-next:disabled{background:#c8cee0;color:#fff;cursor:not-allowed}
+  .btn-back{background:#fff;color:var(--sub);border:1.5px solid var(--line)}
+  .btn-back:hover{border-color:var(--accent);color:var(--accent)}
+  .done{text-align:center;padding:8px 0 4px;color:var(--ok);font-weight:700}
+  .foot{text-align:center;color:var(--sub);font-size:12.5px;margin:8px 0 28px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <h1 id="courseTitle">互动特训课</h1>
+    <p id="courseSub">跟着问题一步步想，别急着看答案</p>
+    <div class="progress"><i id="bar"></i></div>
+  </div>
+  <div id="stage"></div>
+  <div class="foot">讲人话 · 一步步来 · 你一定能看懂</div>
+</div>
+
+<script>
+/* =====================================================================
+   只改这里：COURSE 对象
+   - steps 是一道题拆成的若干引导环节
+   - kind: "read" 讲解/读题 | "quiz" 选择题 | "summary" 母套路小结卡
+   - quiz 的 options: {t:选项文字, ok:是否正确答案, why:点击后才显示的讲解}
+   - why 里可以放 <b> 等简单 HTML
+   ===================================================================== */
+var COURSE = {
+  "title": "第一章学情调研 · 错题归因特训",
+  "subtitle": "89 分不是 9 个坑，是 4 个漏洞——把根子补上",
+  "steps": [
+    {
+      "kind": "read",
+      "tag": "开场",
+      "title": "先说结论：89 分不是「9 个坑」，是「4 个漏洞」",
+      "html": "<p>这份卷子 120 分满分，你拿了 <b>89 分</b>，错 9 处。你可能会想：<b>「我都做了 10 张卷子了，怎么还有这么多不会？」</b></p><p>我把你 9 处错题一处一处看过了（包括你在卷子上写的草稿），结论是——<b>这 9 处错题不是 9 个互不相干的坑，它们背后只有 4 个漏洞。</b></p><table style=\"width:100%;border-collapse:collapse;font-size:14px;margin:10px 0\"><tr style=\"background:#eef1fe\"><th style=\"border:1px solid #dfe3ee;padding:8px 6px\">漏洞</th><th style=\"border:1px solid #dfe3ee;padding:8px 6px\">对应错题</th><th style=\"border:1px solid #dfe3ee;padding:8px 6px\">一句话说清</th></tr><tr><td style=\"border:1px solid #dfe3ee;padding:8px 6px\"><b>① 只会「正着用」，<br>不会「倒着用」</b></td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\">14、17</td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\">给三边 → 判直角，这一步没有形成条件反射</td></tr><tr><td style=\"border:1px solid #dfe3ee;padding:8px 6px\"><b>② 不会「翻译」<br>成直角三角形</b></td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\">5、6、9、16</td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\">生活情境、复杂图、立体图 → 不知道往哪个方向转化</td></tr><tr><td style=\"border:1px solid #dfe3ee;padding:8px 6px\"><b>③ 不会「算几项<br>推通项」</b></td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\">10</td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\">规律题不敢代几项算，直接凭感觉选</td></tr><tr><td style=\"border:1px solid #dfe3ee;padding:8px 6px\"><b>④ 多层综合<br>就「断链」</b></td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\">21(3)、25</td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\">超过两层就停笔，不会拆步骤拿分</td></tr></table><div class=\"note\"><b>这就是「为什么刷了 10 张卷子还有这么多错」的答案：</b><br>你刷的卷子里，能做的题都是<b>「直球」</b>（给你直角三角形、给你两边、求第三边），而错的全是<b>「要先转化的球」</b>。刷题量练的是<b>熟练度</b>，但这 4 个漏洞靠的是<b>识别力</b>——不同的东西，刷再多同类型的题也补不上。</div>"
+    },
+    {
+      "kind": "read",
+      "tag": "A",
+      "title": "漏洞①：勾股定理，你只会「正着用」",
+      "html": "<p>勾股定理有两个方向，很多人只知道第一个：</p><table style=\"width:100%;border-collapse:collapse;font-size:14.5px;margin:10px 0\"><tr style=\"background:#eef1fe\"><th style=\"border:1px solid #dfe3ee;padding:9px 6px\">方向</th><th style=\"border:1px solid #dfe3ee;padding:9px 6px\">人话</th><th style=\"border:1px solid #dfe3ee;padding:9px 6px\">已知什么</th><th style=\"border:1px solid #dfe3ee;padding:9px 6px\">能干什么</th></tr><tr><td style=\"border:1px solid #dfe3ee;padding:9px 6px\"><b>正着用</b><br>（定理）</td><td style=\"border:1px solid #dfe3ee;padding:9px 6px\">先知道它是直角三角形</td><td style=\"border:1px solid #dfe3ee;padding:9px 6px\">直角 + 两条边</td><td style=\"border:1px solid #dfe3ee;padding:9px 6px\">求第三条边</td></tr><tr><td style=\"border:1px solid #dfe3ee;padding:9px 6px\"><b>倒着用</b><br>（逆定理）</td><td style=\"border:1px solid #dfe3ee;padding:9px 6px\"><b>反过来，用边去「验」它是不是直角三角形</b></td><td style=\"border:1px solid #dfe3ee;padding:9px 6px\">三条边（都不知道有没有直角）</td><td style=\"border:1px solid #dfe3ee;padding:9px 6px\">判定它是不是直角三角形、哪个角是直角</td></tr></table><p>你这次错的 14 题、17 题，<b>全部死在「倒着用」上</b>。</p><div class=\"note\">「正着用」是<b>照着图纸施工</b>；「倒着用」是<b>拿着材料去反推它能不能拼成直角</b>。后者难，但它才是压轴题的常客。</div>\n<svg viewBox=\"0 0 460 250\" style=\"width:100%;max-width:470px;background:#fff;border:1px solid #ddd;border-radius:8px\">\n  <text x=\"16\" y=\"26\" font-size=\"14.5\" fill=\"#2c3e50\" font-weight=\"bold\">看到三条边 → 先算「两小平方和」再比「最大平方」</text>\n  <rect x=\"24\" y=\"46\" width=\"150\" height=\"66\" rx=\"10\" fill=\"#eef1fe\" stroke=\"#4f6ef7\" stroke-width=\"1.6\"/>\n  <text x=\"44\" y=\"74\" font-size=\"14\" fill=\"#2f3a56\">第一步：找最长边 c</text>\n  <text x=\"44\" y=\"98\" font-size=\"13\" fill=\"#5b6472\">（先排个序，最长的一定是斜边候选）</text>\n  <rect x=\"190\" y=\"46\" width=\"150\" height=\"66\" rx=\"10\" fill=\"#e7f7ef\" stroke=\"#1f9d6b\" stroke-width=\"1.6\"/>\n  <text x=\"210\" y=\"74\" font-size=\"14\" fill=\"#2f3a56\">第二步：算 a² + b²</text>\n  <text x=\"210\" y=\"98\" font-size=\"13\" fill=\"#5b6472\">两条短边各自平方再相加</text>\n  <rect x=\"356\" y=\"46\" width=\"0\" height=\"0\" fill=\"none\"/>\n  <rect x=\"96\" y=\"138\" width=\"270\" height=\"80\" rx=\"10\" fill=\"#fff8e6\" stroke=\"#b7791f\" stroke-width=\"1.6\"/>\n  <text x=\"120\" y=\"166\" font-size=\"14\" fill=\"#7a5a12\">第三步：比大小</text>\n  <text x=\"120\" y=\"190\" font-size=\"13.5\" fill=\"#2f3a56\">a²+b² = c² → 直角三角形（直角对着最长边）</text>\n  <text x=\"120\" y=\"210\" font-size=\"13.5\" fill=\"#2f3a56\">a²+b² ≠ c² → 不是直角三角形</text>\n  <path d=\"M 174 112 L 174 134 L 230 134\" stroke=\"#4f6ef7\" stroke-width=\"1.8\" fill=\"none\" marker-end=\"url(#arrRt)\"/>\n  <defs><marker id=\"arrRt\" markerWidth=\"8\" markerHeight=\"8\" refX=\"6\" refY=\"3\" orient=\"auto\">\n    <path d=\"M0,0 L7,3 L0,6 Z\" fill=\"#4f6ef7\"/></marker></defs>\n  <text x=\"196\" y=\"132\" font-size=\"12\" fill=\"#4f6ef7\">走这一步</text>\n</svg>\n"
+    },
+    {
+      "kind": "read",
+      "tag": "A",
+      "title": "逆定理的三种「出场信号」——看到就该警觉",
+      "html": "<p>不会用逆定理，往往是因为<b>不知道它什么时候出场</b>。记住这三个信号：</p><div class=\"note\"><b>信号 1：题目给了三条边的长度（或给了三条边的平方关系），要你求角度 / 判断形状。</b><br>→ 立刻算「两小平方和」和「最大平方」，比一比。</div><p><b>信号 2：题目给的三个数看着眼熟。</b>常见的勾股数要背下来：</p><table style=\"width:100%;border-collapse:collapse;font-size:14px;margin:8px 0\"><tr style=\"background:#e7f7ef\"><td style=\"border:1px solid #dfe3ee;padding:7px\">3,4,5</td><td style=\"border:1px solid #dfe3ee;padding:7px\">5,12,13</td><td style=\"border:1px solid #dfe3ee;padding:7px\">6,8,10</td><td style=\"border:1px solid #dfe3ee;padding:7px\">7,24,25</td><td style=\"border:1px solid #dfe3ee;padding:7px\">8,15,17</td></tr><tr style=\"background:#e7f7ef\"><td style=\"border:1px solid #dfe3ee;padding:7px\">9,40,41</td><td style=\"border:1px solid #dfe3ee;padding:7px\">1,1,√2</td><td style=\"border:1px solid #dfe3ee;padding:7px\">1,√3,2</td><td style=\"border:1px solid #dfe3ee;padding:7px\">1,2,√5</td><td style=\"border:1px solid #dfe3ee;padding:7px\">2,3,√13</td></tr></table><div class=\"note\"><b>信号 3：两条线段的平方和（或差）刚好等于第三条的平方。</b><br>比如「AB² + BC² = AC²」这种式子一旦出现，就是在喊：「我是直角三角形！」</div><p style=\"color:#c0392b\"><b>一句话：只要题目里出现了「三条边的平方」，你的笔就应该先去算那两个平方和。</b></p>"
+    },
+    {
+      "kind": "quiz",
+      "tag": "A",
+      "title": "实战：第 14 题，你该先算什么",
+      "prompt": "<p>题目：∠BAC = 90°，AB = 4，AC = 4，BD = 7，DC = 9，求 ∠DBA。</p><p>这条题你留白了。<b>看到「4、4、7、9」这一堆数字，第一步最应该干什么？</b></p><img src=\"e0913_q14.jpg\" style=\"width:100%;max-width:470px;border:1px solid #ddd;border-radius:8px;display:block;margin:10px auto\">",
+      "options": [
+        {
+          "t": "A. 把 AB = 4、AC = 4 用上，先算出 BC = 4√2；再看 BD² + BC² 是不是等于 DC²",
+          "ok": true,
+          "why": "✅ <b>这就是唯一正确的起手式。</b><br>AB = AC = 4 且 ∠BAC = 90° → △ABC 是<b>等腰直角三角形</b>，BC² = 4²+4² = 32，BC = 4√2。<br>然后验算：BD² + BC² = 7² + 32 = 49 + 32 = <b>81</b>，而 DC² = 9² = <b>81</b>。<br><b>相等！</b>所以 △DBC 是直角三角形，∠DBC = 90°。<br>于是 ∠DBA = ∠DBC − ∠ABC = 90° − 45° = <b>45°</b>。<br><span style=\"color:#c0392b\">注意：这一整套动作的核心，就是「倒着用」——先算出 BC，再拿三边去验直角。</span>"
+        },
+        {
+          "t": "B. 直接用 7 和 9 算三角形 DBC 的面积",
+          "ok": false,
+          "why": "❌ 光知道 BD = 7、DC = 9 两条边，算不出面积（还缺夹角）。而且题目要的是<b>角</b>，不是面积——你的方向从一开始就偏了。"
+        },
+        {
+          "t": "C. 用勾股定理直接求 AD",
+          "ok": false,
+          "why": "❌ 想求 AD 得先知道某个直角三角形，但 △ADC 和 △ADB 你都还不知道有没有直角。得先靠逆定理把直角「验出来」，这一步不能跳。"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "A",
+      "title": "第 14 题完整解答 + 这类题的固定套路",
+      "html": "<p><b>标准解答（照这个格式写）：</b></p><div class=\"note\">∵ ∠BAC = 90°，AB = AC = 4<br>∴ △ABC 是等腰直角三角形，BC² = AB² + AC² = 4² + 4² = 32，∠ABC = 45°<br>在 △DBC 中：BD² + BC² = 7² + 32 = 49 + 32 = 81，DC² = 9² = 81<br>∴ BD² + BC² = DC²<br>∴ △DBC 是直角三角形，<b>∠DBC = 90°</b>（直角对着最长边 DC）<br>∴ ∠DBA = ∠DBC − ∠ABC = 90° − 45° = <b>45°</b></div><p><b>把它抽象成套路：</b></p><ol><li>题目给了一个<b>已知形状的图形</b>（等腰直角、等边等）→ 先把能算的都算出来（BC、角度）</li><li>题目给了<b>另外一组边</b>（BD、DC）→ 立刻用逆定理去验有没有隐藏的直角</li><li>两个直角 + 已知角度一减，答案就出来了</li></ol><div class=\"note\" style=\"border-left-color:#c0392b\"><b>这道题最值钱的一句话：</b><br>「<b>4、4、7、9</b>」里藏着「<b>7² + 32 = 81</b>」——这种「算出来刚好相等」的感觉，就是逆定理题的手感。多练几次就成条件反射了。</div>"
+    },
+    {
+      "kind": "quiz",
+      "tag": "A",
+      "title": "第 17 题：你的草稿错在哪",
+      "prompt": "<p>题目：m 是大于 1 的整数，a = 2m，b = m²−1，c = m²+1，求证 a、b、c 为勾股数。</p><p>你在卷子上写的是：</p><div class=\"note\" style=\"background:#fdecea;border-left-color:#e0533d\">(m+1)² = m² + 1 + 2m　　(m−1)² = m² + 1 − 2m<br>(m+1)² = (m−1)² + 4m<br>∵ a = 2m，b = m²−1，c = m²+1　∴ c + a = ...（写不下去了）</div><p><b>问题出在哪？</b></p><img src=\"e0913_q17.jpg\" style=\"width:100%;max-width:470px;border:1px solid #ddd;border-radius:8px;display:block;margin:10px auto\">",
+      "options": [
+        {
+          "t": "A. 他把 b = m²−1 当成 (m−1)² 去算了，完全跑偏",
+          "ok": true,
+          "why": "✅ <b>抓到了。</b>b 是 m² − 1（平方差），不是 (m−1)²（完全平方），两者相差 2m，你把它们当成一回事，后面的式子自然全乱。<br><b>更根本的问题：</b>题目说「证勾股数」，那就<b>只有一个动作</b>——把 a² + b² 算出来，看它等不等于 c²。你绕到 (m+1)² 上去了，方向偏了。"
+        },
+        {
+          "t": "B. 他漏写了「m 是大于 1 的整数」这个条件",
+          "ok": false,
+          "why": "❌ 这个条件确实要用（保证 a、b、c 都是正数），但它不是你卡住的原因——你是算到一半算不下去了，不是忘了写条件。"
+        },
+        {
+          "t": "C. 平方展开算错了",
+          "ok": false,
+          "why": "❌ (m+1)²、4m 这些展开本身没错，问题是<b>这些式子跟题目要证的东西没关系</b>。算得再对也没用——这就是「方向比速度重要」。"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "A",
+      "title": "第 17 题正确写法：「证勾股数」只有一个动作",
+      "html": "<p>先记住这句话：</p><div class=\"note\" style=\"font-size:16px;text-align:center\"><b>「证明三个数是勾股数」= 证明 a² + b² = c²（且它们都是正整数）</b></div><p>就这么简单粗暴。因为勾股数的定义就是「满足两小平方和等于最大平方的三个正整数」。</p><p><b>标准解答：</b></p><div class=\"note\">a² + b² = (2m)² + (m² − 1)²<br>　　　= 4m² + (m⁴ − 2m² + 1)　　← 完全平方展开，别跳步<br>　　　= m⁴ + 2m² + 1<br>　　　= (m² + 1)²<br>　　　= c²<br>又 ∵ m &gt; 1 且 m 是整数，∴ a = 2m、b = m² − 1、c = m² + 1 都是正整数<br>∴ a² + b² = c²，即 a、b、c 为勾股数。</div><div class=\"note\" style=\"border-left-color:#1f9d6b\"><b>卡点在哪里？在「完全平方展开」这一步：</b><br>(m² − 1)² = m⁴ − 2m² + 1 —— 这是八年级必须练到「不用想」的基本功。<br>你把 b 记成 (m−1)²，说明<b>「平方差 m²−1」和「完全平方 (m−1)²」在你脑子里还是一团</b>。<br>课后请把这两个写 20 遍：<br><b>m² − 1 = (m+1)(m−1)</b>（平方差，因式分解）<br><b>(m−1)² = m² − 2m + 1</b>（完全平方，展开）</div><img src=\"e0913_q17.jpg\" style=\"width:100%;max-width:430px;border:1px solid #ddd;border-radius:8px;display:block;margin:10px auto\">"
+    },
+    {
+      "kind": "quiz",
+      "tag": "A",
+      "title": "自测：这个格式你会写吗",
+      "prompt": "<p>已知 △ABC 三边为 a、b、c，满足 a² + b² = c²。要说明「△ABC 是直角三角形，且 ∠C = 90°」，<b>下面哪种写法是对的</b>？</p>",
+      "options": [
+        {
+          "t": "A. ∵ a² + b² = c²，∴ △ABC 是直角三角形，∠C = 90°",
+          "ok": true,
+          "why": "✅ <b>对。这就是得分句。</b>注意两点：<br>① 必须由 a² + b² = c² 直接推出「直角三角形」——这是逆定理的标准句式；<br>② <b>直角对着最长边 c</b>，所以是 ∠C = 90°，不是 ∠A 或 ∠B。这一点每年都有大量学生写错。"
+        },
+        {
+          "t": "B. ∵ a² + b² = c²，∴ △ABC 是直角三角形，∠A = 90°",
+          "ok": false,
+          "why": "❌ 前半句对，后半句错。c 是最长边，直角就在 c <b>对着的那一个角</b>上，也就是 ∠C。记住口诀：<b>直角找最长边，最长边对面是直角</b>。"
+        },
+        {
+          "t": "C. ∵ a² + b² = c²，∴ ∠C = 90°（不必说是直角三角形）",
+          "ok": false,
+          "why": "❌ 结论本身不错，但考试里少了「△ABC 是直角三角形」这句判定，属于<b>论证不完整</b>，容易扣分。判定和结论都要写全。"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "B",
+      "title": "漏洞②：不会把「生活/复杂图形」翻译成直角三角形",
+      "html": "<p>这次错的 5、6、9、16 四道题，长得完全不一样（门框、风车、网格、蚂蚁），但它们是<b>同一个病</b>：</p><div class=\"note\" style=\"font-size:15.5px\"><b>题面给的不是直角三角形，需要你先「造」出一个直角三角形（或者找到藏在里面的那个），才能用勾股。</b></div><p>这一类题的共同动作是<b>「翻译」</b>：</p><table style=\"width:100%;border-collapse:collapse;font-size:14px;margin:10px 0\"><tr style=\"background:#eef1fe\"><th style=\"border:1px solid #dfe3ee;padding:8px 6px\">题</th><th style=\"border:1px solid #dfe3ee;padding:8px 6px\">题面说的是什么</th><th style=\"border:1px solid #dfe3ee;padding:8px 6px\">要翻译成什么</th></tr><tr><td style=\"border:1px solid #dfe3ee;padding:8px 6px\">5</td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\">木板能不能通过门框</td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\">门框的<b>对角线</b>是多长</td></tr><tr><td style=\"border:1px solid #dfe3ee;padding:8px 6px\">6</td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\">风车的外围周长</td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\">外围由<b>哪几段</b>拼成、每段多长</td></tr><tr><td style=\"border:1px solid #dfe3ee;padding:8px 6px\">9</td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\">网格里两个角相加</td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\">把两个角<b>搬到一起</b>，凑成特殊角</td></tr><tr><td style=\"border:1px solid #dfe3ee;padding:8px 6px\">16</td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\">蚂蚁在方块表面爬</td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\">把盒子<b>剪开摊平</b>，变平面两点距离</td></tr></table><p style=\"color:#c0392b\"><b>一句话：几何题不会做，八成不是不会算，而是「没想办法把图变成能用公式的样子」。</b></p>"
+    },
+    {
+      "kind": "read",
+      "tag": "B",
+      "title": "第 5 题：门框题——「能通过」是什么意思",
+      "html": "<p>题目：一扇高 2 m、宽 1.5 m 的门框，三块薄木板：①长3m宽2.7m　②长2.8m宽2.8m　③长4m宽2.4m。能从这扇门通过的木板是？</p><p>你选了 <b>B（②号）</b>，正确的是 <b>C（③号）</b>。红笔已经圈出来了。</p><img src=\"e0913_q5.jpg\" style=\"width:100%;max-width:470px;border:1px solid #ddd;border-radius:8px;display:block;margin:10px auto\"><p><b>你想的是什么？</b>大概是「②号是 2.8×2.8 的正方形，最方正，最好过」——但门框不是方形的，它是 2×1.5 的长方形。</p><div class=\"note\"><b>关键翻译：木板斜着穿门的时候，能从门里过去的最大「宽度」= 门框的对角线。</b><br>门框对角线 = √(2² + 1.5²) = √(4 + 2.25) = √6.25 = <b>2.5 m</b><br>所以木板的<b>长和宽里至少要有一个小于 2.5 m</b>（那个方向顺着对角线穿过去）：<br>① 长3、宽2.7 → 两个都 &gt; 2.5　✗<br>② 长2.8、宽2.8 → 两个都 &gt; 2.5　✗<br>③ 长4、宽2.4 → 宽 2.4 &lt; 2.5　✓<br>∴ 选 <b>C</b></div><div class=\"note\" style=\"border-left-color:#c0392b\"><b>你疏忽的那个点：</b>判断「能不能通过」看的是木板的<b>截面尺寸</b>（长和宽），不是它的长度。④号木板长 4 m 看着最吓人，但它的宽只有 2.4 m，反而是唯一能过的。</div>"
+    },
+    {
+      "kind": "read",
+      "tag": "B",
+      "title": "第 6 题：赵爽弦图——「外围」到底是哪几段",
+      "html": "<p>题目：赵爽弦图里四个全等直角三角形，AC = 6，BC = 5。把「边长为 6 的直角边」向外延长一倍，得到数学风车，求风车外围周长。</p><p>你选了 <b>B（52）</b>，正确答案是 <b>D（76）</b>。</p><img src=\"e0913_q56.jpg\" style=\"width:100%;max-width:470px;border:1px solid #ddd;border-radius:8px;display:block;margin:10px auto\"><p><b>你算对了哪一半？</b>你把 6 延长一倍得到 12，然后用勾股算出斜边：√(5² + 12²) = √169 = 13。这一步完全正确！</p><p><b>你漏了哪一半？</b>你以为外围就是 4 条斜边，所以 4 × 13 = 52。但风车的外围<b>每一片都是由「斜边 13」和「延长段 6」两段组成的</b>：</p><div class=\"note\">风车外围周长 = (13 + 6) × 4 = 19 × 4 = <b>76</b>　→ 选 <b>D</b></div><div class=\"note\" style=\"border-left-color:#1f9d6b\"><b>这道题教你的动作：</b>遇到「求某个复杂图形的周长」，先做一件事——<b>沿着图形的边，用手指头一段一段地数一圈</b>，把每一段是什么、多长，全部列出来，最后再加。<br>千万别凭「大概是这样」就乘 4。你的 52 就是「凭感觉数漏了两段」的典型。</div>"
+    },
+    {
+      "kind": "read",
+      "tag": "B",
+      "title": "第 9 题：网格求角——把两个角「搬到一起」",
+      "html": "<p>题目：正方形网格里 A、B、C、D 都是格点，求 ∠BAC + ∠DAC。</p><img src=\"e0913_q9.jpg\" style=\"width:100%;max-width:470px;border:1px solid #ddd;border-radius:8px;display:block;margin:10px auto\"><p>这题的思路非常经典，值得单独记一个套路：</p><div class=\"note\"><b>「两个分散的角相加」怎么办？——把它们搬到一起。</b><br>搬角最常用的工具是<b>轴对称（翻折）</b>：</div><p><b>官方解法（三步）：</b></p><ol><li><b>作对称点：</b>作点 B 关于直线 AC 的对称点 B′，连接 B′A、B′D。<br>由对称性得 <b>∠BAC = ∠B′AC</b> —— 角搬过来了！</li><li><b>算三边平方：</b><br>AB′² = 1² + 3² = 10<br>B′D² = 1² + 3² = 10<br>AD² = 4² + 2² = 20</li><li><b>逆定理出场：</b>∵ AB′ = B′D 且 AB′² + B′D² = 10 + 10 = 20 = AD²<br>∴ △AB′D 是<b>等腰直角三角形</b> → <b>∠B′AD = 45°</b><br>∴ ∠BAC + ∠DAC = ∠B′AC + ∠DAC = ∠B′AD = <b>45°</b>　→ 选 B</li></ol><div class=\"note\" style=\"border-left-color:#c0392b\"><b>注意这题又用到了「倒着用」！</b><br>算出三个平方（10、10、20）→ 发现 10+10=20 → 判定等腰直角。<br>所以你看：<b>漏洞①（逆定理）和漏洞②（图形转化）经常是连着一起考的</b>。这也是为什么单独补一个不够，得一起补。</div>"
+    },
+    {
+      "kind": "read",
+      "tag": "B",
+      "title": "第 16 题：蚂蚁爬方块——立体变平面的三句话",
+      "html": "<p>题目：棱长分别为 3⅗ cm、3 cm 的两个正方体如图放置，P 在 E₁F₁ 上且 E₁P = ⅓E₁F₁，蚂蚁沿表面从 A 爬到 P，求最短路程。</p><p>你留白了。这题属于「立体图形表面最短路径」，是必考模型，套路非常固定：</p><img src=\"e0913_q16.jpg\" style=\"width:100%;max-width:470px;border:1px solid #ddd;border-radius:8px;display:block;margin:10px auto\"><div class=\"note\"><b>三句话，背下来：</b><br>① <b>沿棱剪开摊平</b>——把立体图形变成一张平面图（虚线就是剪开的那条棱）<br>② <b>两点之间线段最短</b>——摊平后，A 和 P 直接连一条直线<br>③ <b>把所有可能的走法都比一遍</b>——同一个 A、P，可能有好几种摊平方式，每种算一遍勾股，<b>取最小的那个</b></div>\n<svg viewBox=\"0 0 460 300\" style=\"width:100%;max-width:470px;background:#fff;border:1px solid #ddd;border-radius:8px\">\n  <text x=\"16\" y=\"24\" font-size=\"14\" fill=\"#2c3e50\" font-weight=\"bold\">立体表面最短路径：把盒子「剪开摊平」</text>\n  <rect x=\"55\" y=\"150\" width=\"280\" height=\"120\" fill=\"#f2f7ff\" stroke=\"#4a7dbd\" stroke-width=\"2\"/>\n  <rect x=\"335\" y=\"150\" width=\"80\" height=\"60\" fill=\"#ffe9e6\" stroke=\"#c0392b\" stroke-width=\"2\"/>\n  <line x1=\"55\" y1=\"150\" x2=\"335\" y2=\"150\" stroke=\"#8a94a6\" stroke-width=\"1\" stroke-dasharray=\"4,3\"/>\n  <line x1=\"55\" y1=\"150\" x2=\"395\" y2=\"210\" stroke=\"#1f9d6b\" stroke-width=\"2.8\"/>\n  <circle cx=\"55\" cy=\"150\" r=\"5.5\" fill=\"#1f9d6b\"/>\n  <circle cx=\"395\" cy=\"210\" r=\"5.5\" fill=\"#c0392b\"/>\n  <text x=\"30\" y=\"142\" font-size=\"15\" fill=\"#1f9d6b\" font-weight=\"bold\">A</text>\n  <text x=\"402\" y=\"228\" font-size=\"15\" fill=\"#c0392b\" font-weight=\"bold\">P</text>\n  <text x=\"150\" y=\"290\" font-size=\"13\" fill=\"#5b6472\">摊平后：水平 = 各段横着加，竖直 = 各段竖着加</text>\n  <text x=\"200\" y=\"188\" font-size=\"13.5\" fill=\"#1f9d6b\" font-weight=\"bold\">两点连线最短</text>\n  <path d=\"M 355 158 L 341 158 M 341 158 L 341 172\" stroke=\"#c0392b\" stroke-width=\"1.2\" fill=\"none\"/>\n  <rect x=\"345\" y=\"150\" width=\"0\" height=\"0\" fill=\"none\"/>\n  <text x=\"348\" y=\"146\" font-size=\"12.5\" fill=\"#c0392b\">高</text>\n  <text x=\"190\" y=\"142\" font-size=\"12.5\" fill=\"#4a7dbd\">横着摊开的长度</text>\n</svg>\n<p><b>具体到这道题：</b>关键是把「横向走了多少」和「竖向走了多少」分别加起来。</p><ul><li>横向 = 大正方体的棱长 + P 到左边那个顶点的距离</li><li>竖向 = 大正方体棱长 + 小正方体棱长</li><li>然后斜边 = √(横向² + 竖向²)</li></ul><div class=\"note\">这道题的正确答案是 <b>16 cm</b>。但比答案更重要的是：<b>你要能自己画出展开图</b>。下次遇到蚂蚁题，第一件事就是在草稿纸上画一排方块摊平的样子——画出来了，这题就做出来了 80%。</div>"
+    },
+    {
+      "kind": "read",
+      "tag": "C",
+      "title": "漏洞③：规律题——不敢代数字，直接凭感觉选",
+      "html": "<p>第 10 题：正方形 ABCD 边长 4，面积记作 S₁；以 AB 为斜边向外作等腰直角三角形 EAB，再以它的一条直角边为边作正方形，面积记作 S₂；……按此规律继续，则 S₇ 的值是？</p><p>你选了 C（(½)³），正确答案是 <b>D（(½)²）</b>。</p><img src=\"e0913_q10.jpg\" style=\"width:100%;max-width:470px;border:1px solid #ddd;border-radius:8px;display:block;margin:10px auto\"><div class=\"note\"><b>规律题的唯一正确姿势：先老老实实算出前三项。</b><br>不要看到「S₇」就头晕，也不要凭选项猜。算前三项，规律自己会跳出来。</div><p><b>一步步算：</b></p><table style=\"width:100%;border-collapse:collapse;font-size:14px;margin:10px 0\"><tr style=\"background:#eef1fe\"><th style=\"border:1px solid #dfe3ee;padding:8px\">项</th><th style=\"border:1px solid #dfe3ee;padding:8px\">它是什么</th><th style=\"border:1px solid #dfe3ee;padding:8px\">怎么算</th><th style=\"border:1px solid #dfe3ee;padding:8px\">结果</th></tr><tr><td style=\"border:1px solid #dfe3ee;padding:8px\">S₁</td><td style=\"border:1px solid #dfe3ee;padding:8px\">正方形 ABCD</td><td style=\"border:1px solid #dfe3ee;padding:8px\">4²</td><td style=\"border:1px solid #dfe3ee;padding:8px\"><b>16</b></td></tr><tr><td style=\"border:1px solid #dfe3ee;padding:8px\">S₂</td><td style=\"border:1px solid #dfe3ee;padding:8px\">以直角边 EA 为边的正方形</td><td style=\"border:1px solid #dfe3ee;padding:8px\">2EA² = AB² = 16 → EA² = 8</td><td style=\"border:1px solid #dfe3ee;padding:8px\"><b>8</b></td></tr><tr><td style=\"border:1px solid #dfe3ee;padding:8px\">S₃</td><td style=\"border:1px solid #dfe3ee;padding:8px\">对 S₂ 重复同样动作</td><td style=\"border:1px solid #dfe3ee;padding:8px\">½ × S₂</td><td style=\"border:1px solid #dfe3ee;padding:8px\"><b>4</b></td></tr><tr><td style=\"border:1px solid #dfe3ee;padding:8px\">S₄</td><td style=\"border:1px solid #dfe3ee;padding:8px\">同上</td><td style=\"border:1px solid #dfe3ee;padding:8px\">½ × S₃</td><td style=\"border:1px solid #dfe3ee;padding:8px\"><b>2</b></td></tr></table><div class=\"note\">看到规律了吗？<b>16 → 8 → 4 → 2 → … 每次×½。</b><br>所以 Sₙ = 16 × (½)<sup>n−1</sup>，整理一下就得到 <b>Sₙ = (½)<sup>n−5</sup></b>。<br>要求 S₇：S₇ = (½)<sup>7−5</sup> = (½)² → 选 <b>D</b>。</div><div class=\"note\" style=\"border-left-color:#1f9d6b\"><b>为什么「每次÷2」？</b>因为「以一条边为斜边作等腰直角三角形，再用它的直角边作正方形」这个动作，本质是把边长除以 √2（斜边²=2×直角边²），而<b>面积是边长的平方，所以面积除以 2</b>。<br>看懂这一层，你连算都不用算，直接就能写 Sₙ。</div>"
+    },
+    {
+      "kind": "quiz",
+      "tag": "C",
+      "title": "自测：递推题的三步法",
+      "prompt": "<p>遇到「按照此规律继续下去，求 Sₙ」这种题，<b>正确的做题顺序</b>是？</p>",
+      "options": [
+        {
+          "t": "A. 先算出 S₁、S₂、S₃，看它们之间是乘几还是加几，写出通项，再代入要求的项",
+          "ok": true,
+          "why": "✅ <b>标准三步法：①代数字 ②找关系 ③写通项。</b><br>规律题最怕「盯着字母发呆」，你只要动手算前三项，规律基本都会自己跳出来。"
+        },
+        {
+          "t": "B. 先看选项猜一个，再反推",
+          "ok": false,
+          "why": "❌ 这正是你这次的做法，很容易错。选项是给人「验证」用的，不是用来猜的。"
+        },
+        {
+          "t": "C. 直接用 S₁ 和 Sₙ 的关系式硬记公式",
+          "ok": false,
+          "why": "❌ 没有推导过程就记公式，考场上稍微变一下（比如改成 S₈）就懵了。这个题的原因就在于你没算 S₂、S₃，光看着 S₇ 发愁。"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "D",
+      "title": "漏洞④：综合题「断链」——先学会「翻译痕迹」",
+      "html": "<p>第 21(3)：△ABC 中 ∠C = 90°，AC = 6，BC = 8。如图②，用尺规作图的方法作射线 n 交 BC 边于 P，求线段 PC 的长。</p><p>你填了 <b>4.8</b>，正确答案是 <b>3</b>。</p><img src=\"e0913_q21.jpg\" style=\"width:100%;max-width:470px;border:1px solid #ddd;border-radius:8px;display:block;margin:10px auto\"><p><b>先说你的 4.8 是怎么来的：</b>4.8 = 6×8÷10 —— 这是「斜边上的高」的算法（CD = AC·BC ÷ AB）。说明你把图中的射线 <b>n 看成了「作高」</b>。但它的作图痕迹不是作高，是<b>作角平分线</b>。</p><div class=\"note\"><b>尺规作图题的通用第一步：先翻译「痕迹」。</b><br>初中阶段常见的作图痕迹只有那么几种，看到对应的痕迹，立刻翻译成对应的线。</div>\n<svg viewBox=\"0 0 460 260\" style=\"width:100%;max-width:470px;background:#fff;border:1px solid #ddd;border-radius:8px\">\n  <text x=\"16\" y=\"24\" font-size=\"14\" fill=\"#2c3e50\" font-weight=\"bold\">尺规作图的「痕迹」翻译表</text>\n  <line x1=\"30\" y1=\"60\" x2=\"200\" y2=\"60\" stroke=\"#8a94a6\" stroke-width=\"1.6\"/>\n  <circle cx=\"115\" cy=\"60\" r=\"34\" fill=\"none\" stroke=\"#c0392b\" stroke-width=\"1.6\" stroke-dasharray=\"5,3\"/>\n  <text x=\"30\" y=\"112\" font-size=\"13\" fill=\"#2f3a56\">以两点为圆心、同样半径画弧，</text>\n  <text x=\"30\" y=\"132\" font-size=\"13\" fill=\"#2f3a56\">两弧交点 + 原点 → 角平分线</text>\n  <text x=\"30\" y=\"154\" font-size=\"13\" fill=\"#c0392b\" font-weight=\"bold\">→ 关键词：角平分线 → 到两边距离相等</text>\n  <line x1=\"260\" y1=\"60\" x2=\"420\" y2=\"60\" stroke=\"#8a94a6\" stroke-width=\"1.6\"/>\n  <circle cx=\"340\" cy=\"34\" r=\"30\" fill=\"none\" stroke=\"#1f9d6b\" stroke-width=\"1.6\" stroke-dasharray=\"5,3\"/>\n  <circle cx=\"340\" cy=\"86\" r=\"30\" fill=\"none\" stroke=\"#1f9d6b\" stroke-width=\"1.6\" stroke-dasharray=\"5,3\"/>\n  <line x1=\"340\" y1=\"34\" x2=\"340\" y2=\"86\" stroke=\"#1f9d6b\" stroke-width=\"1.6\"/>\n  <text x=\"258\" y=\"122\" font-size=\"13\" fill=\"#2f3a56\">以两点为圆心、同样半径画弧（上下各一交点）</text>\n  <text x=\"258\" y=\"142\" font-size=\"13\" fill=\"#2f3a56\">两交点连线 → 垂直平分线</text>\n  <text x=\"258\" y=\"164\" font-size=\"13\" fill=\"#1f9d6b\" font-weight=\"bold\">→ 关键词：中垂线 → 到两端点距离相等</text>\n  <text x=\"30\" y=\"212\" font-size=\"13.5\" fill=\"#b7791f\" font-weight=\"bold\">步骤一：先翻译痕迹（这是什么线）</text>\n  <text x=\"30\" y=\"234\" font-size=\"13.5\" fill=\"#b7791f\" font-weight=\"bold\">步骤二：再用这条线的性质列方程</text>\n</svg>\n<div class=\"note\" style=\"border-left-color:#c0392b\"><b>「翻译出来」之后再动笔——这是综合题不断链的第一招。</b>很多人一上来就列式计算，连图里的线是什么都没认清，方向自然全错。</div>"
+    },
+    {
+      "kind": "quiz",
+      "tag": "D",
+      "title": "第 21(3)：射线 n 到底是哪条线",
+      "prompt": "<p>按上面的「痕迹翻译表」，你觉得作射线 n 用的是哪种痕迹？它是什么线？</p>",
+      "options": [
+        {
+          "t": "A. 以 A 为圆心画弧，再在角的两边上截取等长——所以 AP 是 ∠BAC 的平分线",
+          "ok": true,
+          "why": "✅ <b>对。</b>痕迹是「以顶点 A 为圆心画弧，交两边于两点，再以这两点为圆心画弧交于一点」，这就是标准的<b>角平分线作法</b>。<br>翻译结果：<b>AP 平分 ∠BAC</b> → 由角平分线性质：<b>点 P 到 AB 和 AC 的距离相等</b>。"
+        },
+        {
+          "t": "B. 以 B 和 C 为圆心、同样半径画弧——所以 AP 是 BC 的垂直平分线",
+          "ok": false,
+          "why": "❌ 如果痕迹是「以 B、C 为圆心画弧交于两点」，那才是中垂线。但图里的弧是以 <b>A</b> 为圆心画的，所以是角平分线，不是中垂线。<b>看痕迹最关键的是看「圆心在哪」</b>。"
+        },
+        {
+          "t": "C. 过 A 作 AB 的垂线——所以 AP 是 AB 边上的高",
+          "ok": false,
+          "why": "❌ 这正是你填 4.8 时的理解，但图里没有作垂线的痕迹（作垂线会有直角符号和特定的弧）。<b>再仔细看一遍图②的弧，它是以 A 为圆心的两条弧。</b>"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "D",
+      "title": "第 21(3) 完整解题链：翻译 → 性质 → 方程",
+      "html": "<p><b>标准解答：</b></p><div class=\"note\">由作图可知：<b>AP 平分 ∠BAC</b>。<br>过点 P 作 PD ⊥ AB 于点 D，则 <b>PD = PC</b>（角平分线上的点到角两边距离相等）<br>在 Rt△ACP 和 Rt△ADP 中：AP = AP，PC = PD<br>∴ △ACP ≌ △ADP（HL），∴ <b>AD = AC = 6</b><br>∴ BD = AB − AD = 10 − 6 = 4<br>设 PC = PD = x，则 BP = BC − PC = 8 − x<br>在 Rt△BDP 中，由勾股定理：BP² = BD² + PD²<br>(8 − x)² = 4² + x²<br>64 − 16x + x² = 16 + x²<br>解得 <b>x = 3</b>，即 PC = 3。</div><div class=\"note\" style=\"border-left-color:#1f9d6b\"><b>看这条链有多长：</b>翻译痕迹 → 角平分线性质 → 全等搬长度 → 设未知数 → 勾股列方程。<b>一共 5 层。</b><br>你填 4.8 就是「链子第一环就翻译错了」。<br><b>综合题不断链的诀窍：每做完一层，停下来问自己「我现在多知道了什么」。</b>多知道一点，下一层就有方向了。</div>"
+    },
+    {
+      "kind": "read",
+      "tag": "D",
+      "title": "第 25 题：这不就是昨天刚学的「旋转全等」吗",
+      "html": "<p>第 25 题：△ABC 和 △DCE 都是等腰直角三角形，直角顶点 C 重合。</p><p>这题你只写了(1) 的「AD ⊥ BE」（还漏了 AD = BE），(2) (3) 直接留白，扣了 9 分。</p><img src=\"e0913_q25.jpg\" style=\"width:100%;max-width:470px;border:1px solid #ddd;border-radius:8px;display:block;margin:10px auto\"><div class=\"note\" style=\"border-left-color:#c0392b\"><b>先说个好消息：</b>这道题的核心，就是你<b>昨天（9 月 12 日）刚学过的「旋转作辅助线」</b>！<br>两个等腰直角共顶点 C → CA = CB、CD = CE，正是「<b>共端点的两条相等线段</b>」——旋转法的头号触发信号。</div><p><b>(1) 的完整答案：</b>AD = BE <b>且</b> AD ⊥ BE（你只写了一半，就丢了结论分）。</p><p><b>证明思路（绕 C 转 90°）：</b></p><div class=\"note\">∵ △ABC、△DCE 都是等腰直角三角形<br>∴ AC = BC，DC = EC，∠ACB = ∠DCE = 90°<br>∴ ∠ACD = ∠ACB − ∠DCB，∠BCE = ∠DCE − ∠DCB<br>∴ ∠ACD = ∠BCE<br>在 △ACD 和 △BCE 中：AC = BC，∠ACD = ∠BCE，CD = CE<br>∴ △ACD ≌ △BCE（<b>SAS</b>）<br>∴ AD = BE，∠CAD = ∠CBE<br>再配合三角形内角和，可以推出 ∠AHB = 90°，即 <b>AD ⊥ BE</b>。</div><p><b>看出来了吗？</b>这套「找两条相等边 → 找夹角相等 → SAS 全等 → 搬边」的流程，和昨天课件里那张「配对表」<b>一模一样</b>。</p>"
+    },
+    {
+      "kind": "read",
+      "tag": "D",
+      "title": "第 25(2)：AE² + AD² = 2AC² 怎么证",
+      "html": "<p>题目：把 △DCE 摆成图②的位置，使 A、D、E 在同一条直线上，求证 AE² + AD² = 2AC²。</p><p><b>核心思路：右边 2AC² 有点吓人，先把它「翻译」成看得见的边。</b></p><div class=\"note\"><b>第一步：把 2AC² 翻译掉。</b><br>△ABC 是等腰直角三角形（AC = BC，∠ACB = 90°）<br>∴ AB² = AC² + BC² = <b>2AC²</b>　←　右边换成了 AB²</div><div class=\"note\"><b>第二步：找个直角三角形，把 AB² 和 AE²、AD² 接上。</b><br>要证 AE² + AD² = AB²，只要证明 ∠AEB = 90° 就行了<br>（那样 △ABE 是直角三角形，斜边 AB，勾股定理直接给答案）。</div><div class=\"note\"><b>第三步：证 ∠AEB = 90°。</b><br>由 (1) 已知 △ACD ≌ △BCE，∴ <b>∠ADC = ∠BEC</b><br>∵ A、D、E 共线，且 △DCE 是等腰直角三角形（∠CDE = 45°）<br>∴ ∠ADC = 180° − 45° = <b>135°</b>　（邻补角）<br>∴ ∠BEC = 135°，而 ∠CED = 45°<br>∴ ∠AEB = ∠BEC − ∠CED = 135° − 45° = <b>90°</b><br>∴ 在 Rt△ABE 中：AE² + BE² = AB²<br>又 BE = AD（由 (1)），∴ <b>AE² + AD² = AB² = 2AC²</b>　∎</div><div class=\"note\" style=\"border-left-color:#1f9d6b\"><b>这题最值得学的一招：「把等号右边翻译成一条线段」。</b><br>看到 2AC² 觉得没法下手，但它其实就是 AB²（等腰直角的斜边平方）。翻译完，题目立刻变成「证一个直角三角形」——一下子就接地气了。</div>"
+    },
+    {
+      "kind": "quiz",
+      "tag": "D",
+      "title": "第 25(3)：BE = 9 的关键一步",
+      "prompt": "<p>题目：把 △DCE 摆成图③，使 <b>∠CBD = 45°</b>，AC = 6，BD = 3，求 BE 的长。</p><p>你已经知道由 (1) 有 <b>BE = AD</b>，所以只要求出 AD 就行。<b>那么关键的一步是什么？</b></p>",
+      "options": [
+        {
+          "t": "A. 先证 ∠ABD = 90°，然后在 Rt△ABD 中用勾股定理求 AD",
+          "ok": true,
+          "why": "✅ <b>完全正确。</b>推理链：<br>△ABC 等腰直角 → ∠ABC = 45°，AB² = 2AC² = 72，AB = 6√2<br>已知 ∠CBD = 45°<br>∴ ∠ABD = ∠ABC + ∠CBD = 45° + 45° = <b>90°</b>（BD 在 ∠ABC 外侧）<br>在 Rt△ABD 中：AD² = AB² + BD² = 72 + 9 = <b>81</b> → AD = <b>9</b><br>由 (1) BE = AD = <b>9</b>。<br><span style=\"color:#c0392b\">看出来了吗？这题又是「两个已知角相加凑出直角」——跟第 14 题、第 9 题是同一个套路。</span>"
+        },
+        {
+          "t": "B. 直接用 BD = 3 和 ∠CBD = 45° 在 △BCD 里算 CD",
+          "ok": false,
+          "why": "❌ 方向偏了。题目要的是 BE，而 BE = AD，所以应该盯着 △ABD 这个三角形。去算 CD 属于「算了半天用不上」。"
+        },
+        {
+          "t": "C. 因为 ∠CBD = 45°，所以 BC 平分 ∠ABD",
+          "ok": false,
+          "why": "❌ 正好说反了。∠ABC = 45°、∠CBD = 45°，说明 BC 是「夹在两个 45° 中间」的那条线，∠ABD 是它们<b>相加</b>得到的 90°，不是被平分。"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "D",
+      "title": "第 25(1) 的教训：结论要写全",
+      "html": "<p>最后说一个「最可惜」的丢分点。</p><p>第 25(1) 问是「直接写出 AD 与 BE 的关系」，你写了 <b>AD ⊥ BE</b>。</p><div class=\"note\" style=\"border-left-color:#c0392b\"><b>正确答案是：「AD = BE 且 AD ⊥ BE」——两个都写。</b><br>你只写了垂直，漏掉了相等。这道题的两个结论各值一半的分。</div><p><b>为什么容易漏？</b>因为「⊥」看起来很显眼、很厉害，而「=」太平常了，容易被忽视。但全等三角形搬边搬角，最直接的产物就是<b>边相等</b>——它才是通常要用到的那一半。</p><div class=\"note\"><b>给你一个防漏技巧：</b>题目问「两个图形的关系」时，<b>把「数量关系」和「位置关系」各问自己一遍</b>：<br>数量上：长度相等吗？倍数关系吗？→ AD = BE<br>位置上：平行吗？垂直吗？共线吗？→ AD ⊥ BE<br>两个都答，就永远不会漏。</div>"
+    },
+    {
+      "kind": "summary",
+      "tag": "收尾",
+      "title": "一张表带走：4 个漏洞 → 4 个动作",
+      "html": "<table style=\"width:100%;border-collapse:collapse;font-size:14px;margin:6px 0\"><tr style=\"background:#eef1fe\"><th style=\"border:1px solid #dfe3ee;padding:8px 6px\">漏洞</th><th style=\"border:1px solid #dfe3ee;padding:8px 6px\">下次遇到就做这个动作</th></tr><tr><td style=\"border:1px solid #dfe3ee;padding:8px 6px\"><b>① 逆定理</b></td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\">看到三条边 → <b>先算「两小平方和」再比「最大平方」</b>；看到 7、9、4√2 这种数 → 立刻想到去凑</td></tr><tr><td style=\"border:1px solid #dfe3ee;padding:8px 6px\"><b>② 图形翻译</b></td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\">先问一句「<b>图里的直角三角形在哪？</b>」没有就<b>造一个</b>：作高、作对称点、剪开摊平</td></tr><tr><td style=\"border:1px solid #dfe3ee;padding:8px 6px\"><b>③ 规律题</b></td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\"><b>先算前三项</b>（S₁、S₂、S₃），规律自己会跳出来</td></tr><tr><td style=\"border:1px solid #dfe3ee;padding:8px 6px\"><b>④ 综合题</b></td><td style=\"border:1px solid #dfe3ee;padding:8px 6px\">先<b>翻译条件</b>（作图痕迹/新定义），每做完一层问自己「我现在多知道了什么」</td></tr></table><div class=\"note\" style=\"font-size:15.5px;line-height:2\"><b>🔑 考前默念的三句自救指令</b><br>① <b>「三条边 → 先平方」</b>（逆定理条件反射）<br>② <b>「没有直角三角形，就动手造一个」</b>（作高 / 对称 / 展开）<br>③ <b>「规律题先代数字，综合题先翻译」</b></div><div class=\"note\" style=\"border-left-color:#c0392b\"><b>最后回答你最想问的那个问题——「为什么做了 10 张卷子还有这么多错？」</b><br>因为你这 10 张卷子里，<b>做对的和做错的，练的根本不是同一种能力</b>。<br>做对的题练的是「<b>手熟</b>」（给你直角三角形，求边长——你已经很熟了）；<br>做错的题考的是「<b>眼力</b>」（判断它是不是直角三角形、要不要造一个、往哪个方向转化）。<br><b>手熟靠重复，眼力靠归纳。</b>继续刷同类型的卷子，你的手会更熟，但眼力不会自己长出来。<br>所以下面这件事比再刷两张卷子重要得多：<b>把错题按「漏洞」归类，而不是一道一道订正。</b></div><div class=\"note\" style=\"margin-top:12px\"><b>给你的作业：</b>打开配套练习卷（6 题），每道题对应一个漏洞。<br>做之前先在心里说一遍「这题是哪个漏洞」，再动笔——养成这个习惯，你下次考的就不是 89 了。</div>"
+    }
+  ]
+};
+window.COURSE = COURSE;
+
+
+/* ===================== 渲染引擎（一般不用改） ===================== */
+const stage = document.getElementById('stage');
+document.getElementById('courseTitle').textContent = COURSE.title;
+document.getElementById('courseSub').textContent = COURSE.subtitle;
+const bar = document.getElementById('bar');
+let cur = 0;
+
+function scrollTop(){
+  const el = document.querySelector('.wrap');
+  if (el && el.scrollIntoView) { try{ el.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){} }
+}
+
+function render(i){
+  cur = i;
+  const total = COURSE.steps.length;
+  bar.style.width = Math.round((i)/(total-1)*100) + '%';
+  stage.innerHTML = '';
+  const s = COURSE.steps[i];
+  const card = document.createElement('div');
+  card.className = 'step active';
+  let inner = '';
+  if (s.tag) inner += `<span class="tag">${s.tag}</span>`;
+  inner += `<h2>${s.title}</h2>`;
+  if (s.kind === 'quiz'){
+    inner += `<p>${s.prompt}</p><div class="opts" id="opts"></div><div class="fb" id="fb"></div>`;
+  } else {
+    inner += s.html || '';
+  }
+  // 导航按钮
+  const isLast = (i === total-1);
+  inner += `<div class="nav">`;
+  inner += i>0 ? `<button class="btn btn-back" id="back">← 上一步</button>` : `<span></span>`;
+  if (!isLast){
+    inner += `<button class="btn btn-next" id="next">下一步 →</button>`;
+  } else if (s.kind !== 'summary'){
+    inner += `<button class="btn btn-next" id="next">完成 ✓</button>`;
+  } else {
+    inner += `<span></span>`;
+  }
+  inner += `</div>`;
+  card.innerHTML = inner;
+  stage.appendChild(card);
+
+  if (s.kind === 'quiz') buildQuiz(s, card);
+  // 绑定导航
+  const nextBtn = card.querySelector('#next');
+  if (nextBtn){
+    if (s.kind === 'quiz'){ nextBtn.disabled = true; } // 答题后才解锁
+    nextBtn.addEventListener('click', ()=>{ if(!nextBtn.disabled) render(i+1); });
+  }
+  const backBtn = card.querySelector('#back');
+  if (backBtn) backBtn.addEventListener('click', ()=> render(i-1));
+  scrollTop();
+}
+
+function buildQuiz(s, card){
+  const optsBox = card.querySelector('#opts');
+  const fb = card.querySelector('#fb');
+  const nextBtn = card.querySelector('#next');
+  s.options.forEach((o, idx)=>{
+    const div = document.createElement('div');
+    div.className = 'opt';
+    div.innerHTML = `<span class="mk">${String.fromCharCode(65+idx)}</span><span>${o.t}</span>`;
+    div.addEventListener('click', ()=>{
+      // 锁定所有选项（避免重复点）
+      optsBox.querySelectorAll('.opt').forEach(el=>{ el.classList.add('locked'); });
+      // 先启用"下一步"（关键：绝不被反馈 handler 卡住）
+      if (nextBtn) nextBtn.disabled = false;
+      // 标出对错
+      div.classList.add(o.ok ? 'correct' : 'wrong', 'chosen');
+      if (!o.ok){
+        // 顺便高亮正确答案，让学生看到正解
+        optsBox.querySelectorAll('.opt').forEach((el,k)=>{ if(s.options[k].ok) el.classList.add('correct'); });
+      }
+      // 揭示评语（try/catch 兜底）
+      try{
+        fb.className = 'fb show ' + (o.ok ? 'ok' : 'bad');
+        fb.innerHTML = (o.ok ? '✅ <b>答对了：</b>' : '⚠️ <b>再看一眼：</b>') + o.why;
+      }catch(e){ /* 反馈出错也不影响下一步 */ }
+      scrollTop();
+    });
+    optsBox.appendChild(div);
+  });
+}
+
+render(0);
+</script>
+</body>
+</html>
