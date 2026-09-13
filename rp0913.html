@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第一章错题 · 四个漏洞 专项练习卷</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:#f6f7fb;color:#1f2430;line-height:1.75;padding:18px}
+  .wrap{max-width:760px;margin:0 auto}
+  .head{background:linear-gradient(135deg,#4f6ef7,#7b5cf0);color:#fff;
+    border-radius:16px;padding:22px 24px;margin-bottom:16px}
+  .head h1{font-size:20px}
+  .head p{opacity:.92;margin-top:6px;font-size:14px}
+  .q{background:#fff;border:1px solid #e6e9f0;border-radius:14px;
+    padding:18px 20px;margin-bottom:14px;box-shadow:0 4px 14px rgba(31,36,48,.05)}
+  .q h3{font-size:16.5px;margin-bottom:10px;color:#4f6ef7}
+  .q p{font-size:15.5px;margin:6px 0}
+  .q ol,.q ul{margin:8px 0 8px 22px;font-size:15.5px}
+  .tagl{display:inline-block;background:#eef1fe;color:#4f6ef7;font-size:12.5px;
+    padding:2px 9px;border-radius:99px;margin-left:6px;font-weight:700}
+  hr{border:none;border-top:1px dashed #dfe3ee;margin:12px 0}
+  details{background:#fff8e6;border:1px solid #f0e0bd;border-radius:10px;
+    padding:10px 14px;margin-top:10px;font-size:15px}
+  summary{cursor:pointer;font-weight:bold;color:#b7791f}
+  .foot{text-align:center;color:#8a94a6;font-size:13.5px;padding:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="head">
+  <h1>第一章错题 · 四个漏洞 专项练习</h1>
+  <p>共 6 题 · 每题对应一个漏洞<br>做之前先在心里说一遍「这题是哪个漏洞」，再动笔</p>
+</div>
+
+<div class="q">
+  <h3>练习 1<span class="tagl">漏洞① 逆定理</span></h3>
+  <p>已知 △ABC 的三边分别为 a、b、c，请判断它是不是直角三角形。如果是，指出哪个角是直角：</p>
+  <ol>
+    <li>a = 8，b = 15，c = 17</li>
+    <li>a = 5，b = 6，c = 8</li>
+    <li>a = 1，b = √3，c = 2</li>
+    <li>a = 3m，b = 4m，c = 5m（m &gt; 0）</li>
+  </ol>
+  <hr>
+  <details><summary>点开对答案</summary>
+  <p><b>(1) 是，∠C = 90°。</b>8² + 15² = 64 + 225 = 289 = 17²，c 最长，所以直角在 c 对着的角上，即 ∠C。</p>
+  <p><b>(2) 不是。</b>5² + 6² = 25 + 36 = 61 ≠ 64 = 8²。</p>
+  <p><b>(3) 是，∠C = 90°。</b>1² + (√3)² = 1 + 3 = 4 = 2²。</p>
+  <p><b>(4) 是，∠C = 90°。</b>(3m)² + (4m)² = 9m² + 16m² = 25m² = (5m)²。</p>
+  <p style="color:#c0392b"><b>答题提醒：</b>必须点明「哪个角是直角」——直角在最长边<b>对着</b>的那个角上。</p>
+  </details>
+</div>
+
+<div class="q">
+  <h3>练习 2<span class="tagl">漏洞① 逆定理（综合）</span></h3>
+  <p>在 △ABC 中，AB = 13，AC = 15，BC = 14，AD 是 BC 边上的高，求 AD 的长。</p>
+  <p style="color:#8a94a6;font-size:14px">小提醒：先设未知数把两条直角边表示出来，再用「同一个高」列方程。</p>
+  <hr>
+  <details><summary>点开对答案</summary>
+  <p><b>答案：AD = 12</b></p>
+  <p><b>过程：</b>设 BD = x，则 CD = 14 − x。</p>
+  <p>在 Rt△ABD 中：AD² = AB² − BD² = 13² − x²</p>
+  <p>在 Rt△ACD 中：AD² = AC² − CD² = 15² − (14 − x)²</p>
+  <p>两式相等：169 − x² = 225 − (196 − 28x + x²)</p>
+  <p>169 − x² = 29 + 28x − x²，解得 x = 5</p>
+  <p>∴ AD² = 169 − 25 = 144，<b>AD = 12</b>。</p>
+  <p style="color:#c0392b"><b>另一种更快的做法（先判直角）：</b>13² + 14² = 169 + 196 = 365 ≠ 225，所以这不是直角三角形——所以只能老实用设未知数 + 勾股列方程。</p>
+  </details>
+</div>
+
+<div class="q">
+  <h3>练习 3<span class="tagl">漏洞② 立体展开</span></h3>
+  <p>一个长方体纸箱，长 30 cm、宽 20 cm、高 10 cm。一只蚂蚁要沿着纸箱的<b>外表面</b>，从顶点 A 爬到与它正对面的顶点 B（体对角线的两个端点）。</p>
+  <p><b>(1) 求蚂蚁爬行的最短路径长度。</b></p>
+  <p><b>(2) 写出你这道题的关键方法。</b></p>
+  <hr>
+  <details><summary>点开对答案</summary>
+  <p><b>(1) 答案：30√2 ≈ 42.4 cm</b></p>
+  <p><b>关键方法：把纸箱摊平成平面图，A、B 两点之间连直线，然后在【所有的摊平方式】里取最小。</b></p>
+  <p>把长方体摊平后，两条直角边分别由「两条棱长之和」和「第三条棱长」构成，共有三种摊法：</p>
+  <ul>
+    <li>水平 (30+20) = 50，竖直 10 → √(50² + 10²) = √2600 ≈ 51.0</li>
+    <li>水平 (30+10) = 40，竖直 20 → √(40² + 20²) = √2000 ≈ 44.7</li>
+    <li>水平 (20+10) = 30，竖直 30 → √(30² + 30²) = <b>√1800 = 30√2 ≈ 42.4</b></li>
+  </ul>
+  <p>三种走法比较后，最小的是 <b>30√2 ≈ 42.4 cm</b>。</p>
+  <p><b>(2)</b> 三句话：① 沿棱剪开摊平 ② 两点之间线段最短 ③ 把所有摊法都比一遍，取最小。</p>
+  <p style="color:#c0392b"><b>易错点：</b>只算一种摊法就下结论。这题三种摊法的结果差很多（51 / 44.7 / 42.4），必须全部算完再比。</p>
+  </details>
+</div>
+
+<div class="q">
+  <h3>练习 4<span class="tagl">漏洞② 复杂图形</span></h3>
+  <p>在正方形网格中，已知两点 A、D 满足 <b>AD² = 20</b>（例如横向 2 格、纵向 4 格的斜线）。</p>
+  <p>现在再找一个格点 B′，使得 <b>AB′² = 10</b> 且 <b>B′D² = 10</b>。</p>
+  <p><b>(1) 判断 △AB′D 是什么三角形，说明理由（用逆定理）。</b></p>
+  <p><b>(2) 求 ∠B′AD 的度数。</b></p>
+  <p><b>(3) 如果 ∠BAC = ∠B′AC（即 B′ 是 B 关于 AC 的对称点），那么 ∠BAC + ∠DAC 等于多少度？</b></p>
+  <hr>
+  <details><summary>点开对答案</summary>
+  <p><b>(1) △AB′D 是等腰直角三角形。</b></p>
+  <p>理由：∵ AB′² = 10，B′D² = 10，AD² = 20</p>
+  <p>∴ AB′ = B′D（等腰），且 AB′² + B′D² = 10 + 10 = 20 = AD²</p>
+  <p>由勾股定理逆定理，△AB′D 是直角三角形，直角对着最长边 AD，即 <b>∠AB′D = 90°</b>。</p>
+  <p>有一个角是 90° 的等腰三角形是等腰直角三角形。</p>
+  <p><b>(2) ∠B′AD = 45°</b>（等腰直角三角形的两个锐角都是 45°）</p>
+  <p><b>(3) ∠BAC + ∠DAC = 45°</b></p>
+  <p>∵ ∠BAC = ∠B′AC（对称），∴ ∠BAC + ∠DAC = ∠B′AC + ∠DAC = ∠B′AD = <b>45°</b>。</p>
+  <p style="color:#c0392b"><b>方法总结：</b>网格里的角，永远想两件事——① 用格点造直角三角形、算三边平方 ② 用对称/全等把目标角<b>搬到一起</b>。</p>
+  </details>
+</div>
+
+<div class="q">
+  <h3>练习 5<span class="tagl">漏洞③ 规律题</span></h3>
+  <p>正方形 A₁B₁C₁D₁ 的边长为 1，面积记作 S₁。以它的一条边为斜边向外作等腰直角三角形，再以该三角形的直角边为边作正方形，面积记作 S₂；按此规律继续，依次得到 S₃、S₄、…</p>
+  <p><b>(1) 分别算出 S₁、S₂、S₃、S₄；</b></p>
+  <p><b>(2) 写出 Sₙ 的表达式；</b></p>
+  <p><b>(3) 求 S₈ 的值。</b></p>
+  <hr>
+  <details><summary>点开对答案</summary>
+  <p><b>(1)</b> S₁ = 1² = <b>1</b>；S₂ = <b>½</b>；S₃ = <b>¼</b>；S₄ = <b>⅛</b></p>
+  <p><b>(2)</b> Sₙ = <b>(½)<sup>n−1</sup></b></p>
+  <p><b>(3)</b> S₈ = (½)<sup>8−1</sup> = (½)<sup>7</sup> = <b>1/128</b></p>
+  <p><b>为什么每次 ×½：</b>「以边为斜边作等腰直角三角形」把边长变成原来的 1/√2（因为 斜边² = 2×直角边²），而面积是边长的平方，所以面积变成原来的 <b>½</b>。</p>
+  <p style="color:#c0392b"><b>规律题三步法：① 代数字 ② 找关系 ③ 写通项。</b>永远从「先算前三项」开始，不要盯着字母发呆。</p>
+  </details>
+</div>
+
+<div class="q">
+  <h3>练习 6<span class="tagl">漏洞④ 综合题</span></h3>
+  <p>在 △ABC 中，∠C = 90°，AC = 6，BC = 8。</p>
+  <p><b>(1) 写出「用尺规作 ∠BAC 的平分线」的三个步骤（不用画图，写文字）。</b></p>
+  <p><b>(2) 设这条角平分线交 BC 于点 P，求线段 PC 的长。</b></p>
+  <p><b>(3) 如果题目改成「作 BC 的垂直平分线交 BC 于 P」，PC 又是多少？</b></p>
+  <hr>
+  <details><summary>点开对答案</summary>
+  <p><b>(1)</b> ① 以顶点 A 为圆心、任意长为半径画弧，分别交 AB、AC 于点 M、N；</p>
+  <p>② 分别以 M、N 为圆心、大于 ½MN 的同样长为半径画弧，两弧交于点 D；</p>
+  <p>③ 作射线 AD，则 AD 平分 ∠BAC。</p>
+  <p><b>(2) PC = 3</b></p>
+  <p>先算 AB = √(6² + 8²) = 10。</p>
+  <p>过 P 作 PD ⊥ AB 于 D。由角平分线的性质：<b>PD = PC</b>。</p>
+  <p>在 Rt△ACP 与 Rt△ADP 中，AP = AP、PC = PD → △ACP ≌ △ADP（HL）→ <b>AD = AC = 6</b>。</p>
+  <p>∴ BD = AB − AD = 10 − 6 = 4。</p>
+  <p>设 PC = PD = x，则 BP = BC − PC = 8 − x。</p>
+  <p>在 Rt△BDP 中：BP² = BD² + PD²，即 (8 − x)² = 4² + x²</p>
+  <p>64 − 16x + x² = 16 + x²，解得 <b>x = 3</b>，即 PC = 3。</p>
+  <p><b>(3) PC = 4</b></p>
+  <p>中垂线上的点到线段两端点距离相等 → PB = PC。设 PC = x，则 PB = x，而 PB + PC = BC = 8，所以 2x = 8，<b>x = 4</b>。</p>
+  <p style="color:#c0392b"><b>这道题的价值：</b>同一个三角形、同样交在 BC 上，「角平分线」和「垂直平分线」是两条完全不同的线，答案也完全不同（3 vs 4）。<b>所以第一步永远是先把作图痕迹翻译清楚。</b></p>
+  </details>
+</div>
+
+<div class="foot">做完拍照给老师 —— 重点看练习 3 有没有把三种摊法都算完、练习 6 有没有先翻译痕迹</div>
+</div>
+</body>
+</html>
