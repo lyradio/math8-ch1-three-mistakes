@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>苏格拉底互动特训课</title>
+<!--
+  =====================================================================
+  初中数学 · 苏格拉底互动特训课 模板（math-socratic-trainer 技能资产）
+  ---------------------------------------------------------------------
+  怎么用：复制本文件，只改下面的 COURSE 对象即可，不要从零写 HTML。
+
+  已修复的已知坑（详见技能 SKILL.md Pitfalls）：
+    ✅ 原生 CSS，不用 Tailwind @apply
+    ✅ 选项绝不预显示"对/接近/反了"——评语只在点击后揭示
+    ✅ 不用 window['check'+id] 拼函数名，改用数据驱动 + 闭包绑定
+    ✅ 不用 split('-') 解析 dash（旧坑：c1-1 → NaN → 下一步死锁）
+       本模板用"步骤索引"驱动，根本不存在 dash 解析
+    ✅ checkQuiz：先启用"下一步"，再 try/catch 显示反馈——
+       反馈 handler 报错也绝不会卡住下一步
+    ✅ scrollIntoView 带 if 防御（部分 webview 缺该方法）
+  几何/题干图：用 PDF 真实截图 base64 嵌入 <img>，严禁手绘 SVG。
+  =====================================================================
+-->
+<style>
+  :root{
+    --bg:#f6f7fb; --card:#ffffff; --ink:#1f2430; --sub:#5b6472;
+    --line:#e6e9f0; --accent:#4f6ef7; --accent-soft:#eef1fe;
+    --ok:#1f9d6b; --ok-soft:#e7f7ef; --bad:#e0533d; --bad-soft:#fdecea;
+    --warn:#b7791f; --radius:16px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.7;padding:18px}
+  .wrap{max-width:760px;margin:0 auto}
+  .head{background:linear-gradient(135deg,#4f6ef7,#7b5cf0);color:#fff;
+    border-radius:var(--radius);padding:22px 24px;margin-bottom:16px;
+    box-shadow:0 8px 24px rgba(79,110,247,.25)}
+  .head h1{font-size:21px;letter-spacing:.5px}
+  .head p{opacity:.92;margin-top:6px;font-size:14px}
+  .progress{height:8px;background:rgba(255,255,255,.35);border-radius:99px;
+    margin-top:14px;overflow:hidden}
+  .progress>i{display:block;height:100%;width:0;background:#fff;
+    border-radius:99px;transition:width .3s}
+  .step{display:none;background:var(--card);border:1px solid var(--line);
+    border-radius:var(--radius);padding:22px 22px 18px;margin-bottom:14px;
+    box-shadow:0 4px 16px rgba(31,36,48,.05)}
+  .step.active{display:block;animation:fade .35s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .tag{display:inline-block;font-size:12px;font-weight:700;color:var(--accent);
+    background:var(--accent-soft);padding:3px 10px;border-radius:99px;margin-bottom:10px}
+  .step h2{font-size:18px;margin-bottom:12px}
+  .step p,.step li{font-size:15.5px;color:var(--ink)}
+  .step p{margin:8px 0}
+  .step ul,.step ol{margin:8px 0 8px 22px}
+  .step li{margin:5px 0}
+  .note{background:var(--accent-soft);border-left:4px solid var(--accent);
+    padding:10px 14px;border-radius:10px;margin:12px 0;font-size:14.5px;color:#2b3550}
+  .imgbox{margin:14px 0;text-align:center}
+  .imgbox img{max-width:100%;border:1px solid var(--line);border-radius:12px;background:#fff}
+  .opts{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+  .opt{display:flex;align-items:flex-start;gap:10px;cursor:pointer;
+    border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;
+    font-size:15px;transition:.15s;background:#fff}
+  .opt:hover{border-color:var(--accent);background:var(--accent-soft)}
+  .opt .mk{flex:0 0 22px;height:22px;border-radius:50%;border:1.5px solid #c4cad6;
+    display:flex;align-items:center;justify-content:center;font-size:13px;color:#8a93a3;font-weight:700}
+  .opt.chosen{border-color:var(--accent)}
+  .opt.correct{border-color:var(--ok);background:var(--ok-soft)}
+  .opt.wrong{border-color:var(--bad);background:var(--bad-soft)}
+  .opt.locked{cursor:default;pointer-events:none}
+  .fb{margin-top:14px;padding:12px 14px;border-radius:12px;font-size:14.5px;
+    display:none}
+  .fb.show{display:block;animation:fade .3s}
+  .fb.ok{background:var(--ok-soft);border:1px solid #bfe9d3;color:#146b48}
+  .fb.bad{background:var(--bad-soft);border:1px solid #f6c9c0;color:#8f2f20}
+  .fb b{color:inherit}
+  .nav{display:flex;justify-content:space-between;gap:10px;margin-top:18px}
+  .btn{border:none;border-radius:12px;padding:12px 20px;font-size:15px;
+    font-weight:700;cursor:pointer;transition:.15s}
+  .btn-next{background:var(--accent);color:#fff;flex:1}
+  .btn-next:hover{background:#3f5ce8}
+  .btn-next:disabled{background:#c8cee0;color:#fff;cursor:not-allowed}
+  .btn-back{background:#fff;color:var(--sub);border:1.5px solid var(--line)}
+  .btn-back:hover{border-color:var(--accent);color:var(--accent)}
+  .done{text-align:center;padding:8px 0 4px;color:var(--ok);font-weight:700}
+  .foot{text-align:center;color:var(--sub);font-size:12.5px;margin:8px 0 28px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <h1 id="courseTitle">互动特训课</h1>
+    <p id="courseSub">跟着问题一步步想，别急着看答案</p>
+    <div class="progress"><i id="bar"></i></div>
+  </div>
+  <div id="stage"></div>
+  <div class="foot">讲人话 · 一步步来 · 你一定能看懂</div>
+</div>
+
+<script>
+/* =====================================================================
+   只改这里：COURSE 对象
+   - steps 是一道题拆成的若干引导环节
+   - kind: "read" 讲解/读题 | "quiz" 选择题 | "summary" 母套路小结卡
+   - quiz 的 options: {t:选项文字, ok:是否正确答案, why:点击后才显示的讲解}
+   - why 里可以放 <b> 等简单 HTML
+   ===================================================================== */
+var COURSE = {
+  "title": "学校卷错题特训 · 90 分的真相",
+  "subtitle": "基础只错 1 题，附加题几乎全灭——补的是「套路」，不是「刷题量」",
+  "steps": [
+    {
+      "kind": "read",
+      "tag": "起",
+      "title": "先看这份卷子的分数结构",
+      "html": "\n<p>今天这份卷子，成绩是这么来的：</p>\n<table style=\"width:100%;border-collapse:collapse;font-size:15px;margin:10px 0\">\n<tr style=\"background:#f2f7ff\"><td style=\"border:1px solid #ddd;padding:8px\"><b>基础卷</b></td>\n<td style=\"border:1px solid #ddd;padding:8px\">满分 100，只错<b>第 16 题</b>（证明题，扣 12 分）→ <b>得 88 分</b></td></tr>\n<tr><td style=\"border:1px solid #ddd;padding:8px\"><b>附加题</b></td>\n<td style=\"border:1px solid #ddd;padding:8px\">题 18、19、附加题 2 等，只拿到 <b>2 分</b></td></tr>\n<tr style=\"background:#fff8e1\"><td style=\"border:1px solid #ddd;padding:8px\"><b>总分</b></td>\n<td style=\"border:1px solid #ddd;padding:8px\"><b>88 + 2 = 90 分</b></td></tr>\n</table>\n<p style=\"color:#1f9d6b\"><b>先说一句好话：这份卷子最大的信息是——基础题已经稳了。</b>\n100 分的基础卷只错 1 道，而且是证明题（不是计算题）。对照 9 月 13 日那张卷子（错了 9 处），这是非常明显的进步。</p>\n<p>但附加题几乎全灭——<b>说明问题已经从「基础不牢」变成了「中档套路没有建立」</b>。今天要补的正是这个。</p>\n"
+    },
+    {
+      "kind": "quiz",
+      "tag": "起·诊断",
+      "title": "先想一个问题",
+      "prompt": "基础卷 100 分只错 1 题，附加题却几乎全灭。你觉得问题在哪？",
+      "options": [
+        {
+          "t": "基础还是太差，得继续多刷基础题",
+          "ok": false,
+          "why": "不对。基础题只错 1 题，而且错的是证明题（考逻辑），不是计算题。再刷基础题＝重复劳动，分数不会动。"
+        },
+        {
+          "t": "中档题（动点、分类讨论、翻折、证明）的套路没建起来",
+          "ok": true,
+          "why": "对。「基础题」考的是<b>会不会做</b>——靠熟练；「附加题」考的是<b>有没有套路</b>——靠归纳。今天要补的正是套路：动点怎么起步、分类怎么列全、翻折怎么下手、证明怎么倒着推。"
+        },
+        {
+          "t": "粗心，附加题没认真读",
+          "ok": false,
+          "why": "粗心只是表相。题 18 她算出 BP=3（读懂了、也算对了），却把答案写成 t=3——这不是粗心，是「动点题里 t 和线段长度怎么换算」这条规矩没有建立。"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "一·原题",
+      "title": "基础卷唯一的错题：题 16",
+      "html": "<img src=\"e0915_q16_stem.jpg\" style=\"width:100%;max-width:520px;border:1px solid #ddd;border-radius:8px;display:block;margin:12px auto\">\n<p><b>人话版题意：</b>三角形 ABC 里，从 C 往 AB 作了一条高 CD。题目额外给了一个条件：\n<b>CD² = AD × BD</b>。要你证明：△ABC 是直角三角形。</p>\n<p><b>先看清楚：这是一道证明题，不是计算题。</b>它要的不是「算出某个数」，而是「用一条逻辑链把结论推出来」。\n所以它的打法和前面的填空题完全不一样。</p>\n"
+    },
+    {
+      "kind": "quiz",
+      "tag": "一·起手",
+      "title": "证明题的第一句话该写什么？",
+      "prompt": "要证明「△ABC 是直角三角形」，你落笔的第一句话应该是什么？",
+      "options": [
+        {
+          "t": "把条件抄一遍：∵ CD ⊥ AB，∴ ∠CDA = ∠CDB = 90°",
+          "ok": false,
+          "why": "这是很多同学的起手式。但条件抄完了，下一步呢？<b>只从条件往前推，很容易中途卡住，或者推着推着就跳步</b>——她这张卷子就是这么丢分的。"
+        },
+        {
+          "t": "先写目标：要证 ∠BCA = 90°，只需证 AC² + BC² = AB²",
+          "ok": true,
+          "why": "对！这就是<b>倒推</b>：先看终点在哪，再回头找路。证直角三角形，90% 靠<b>勾股定理逆定理</b>——把三条边的平方关系写出来。记住：<b>要证明直角三角形，就是把「证角」换成「证边」。</b>"
+        },
+        {
+          "t": "先画一条辅助线，把 CD 延长出去",
+          "ok": false,
+          "why": "这道题的高 CD 已经画好了，再添辅助线只会更乱。而且辅助线不是「想起来就画」，它得服务于某个目的。"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "一·她的答卷",
+      "title": "看看她当时是怎么写的",
+      "html": "<img src=\"e0915_q16_mine.jpg\" style=\"width:100%;max-width:420px;border:1px solid #ddd;border-radius:8px;display:block;margin:12px auto\">\n<p>她的证明是这样的：</p>\n<p style=\"background:#fff8f8;border-left:4px solid #e07a7a;padding:10px 12px;font-size:15px\">\n∵ CD ⊥ AB，∴ ∠CDA = ∠CDB = 90°<br>\n∵ CD² = AD·BD，CD² = AC² − AD²，CD² = BC² − BD²<br>\n∴ ∠BCA = 90°，∴ △ABC 是直角三角形</p>\n<p>看起来很流畅，但老师在上面画了一个大大的叉——我们来找找问题到底在哪。</p>\n"
+    },
+    {
+      "kind": "quiz",
+      "tag": "一·找漏洞",
+      "title": "她的证明卡在哪一步？",
+      "prompt": "她把 CD² 分别用两个小直角三角形表示出来了（CD²=AC²−AD²、CD²=BC²−BD²），然后直接写「∴ ∠BCA=90°」。问题出在哪？",
+      "options": [
+        {
+          "t": "勾股定理用错了，CD² 根本不等于 AC² − AD²",
+          "ok": false,
+          "why": "这一步其实是对的：在 Rt△ACD 中 AC² = AD² + CD²，所以 CD² = AC² − AD² ✓。问题不在这里——<b>她只是把同一个 CD² 换了两件不同的衣服，然后就跳到了终点。</b>"
+        },
+        {
+          "t": "两条式子各自都对，但她没把它们「合起来」变成 AB²，最后一步是凭空跳过去的",
+          "ok": true,
+          "why": "对，这是要害。两式相等只能推出 AC² − AD² = BC² − BD²，<b>这推不出 ∠BCA=90°</b>。要证 ∠BCA=90°，必须落到 AC² + BC² = AB² 这个形状上。她的链条缺了最关键的一段：<b>把 AC² 和 BC² 加起来，再想办法变出 AB²。</b>"
+        },
+        {
+          "t": "她少写了几个符号，格式不规范",
+          "ok": false,
+          "why": "符号不影响逻辑对不对，扣分也不在这里。"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "一·标准证法",
+      "title": "标准证法：四步走",
+      "html": "<img src=\"e0915_q16_key.jpg\" style=\"width:100%;max-width:380px;border:1px solid #ddd;border-radius:8px;display:block;margin:12px auto\">\n<p>老师写的解法（也就是标准答案），拆成四步看：</p>\n<p style=\"background:#f2f7ff;border-left:4px solid #4a7dbd;padding:10px 12px;font-size:15px\">\n<b>① 定目标：</b>要证 ∠BCA = 90°，只需证 AC² + BC² = AB²。<br>\n<b>② 分别算（各自用所在直角三角形的勾股定理）：</b><br>\n　　Rt△BCD 中：BC² = BD² + CD²<br>\n　　Rt△ACD 中：AC² = AD² + CD²<br>\n<b>③ 相加：</b>AC² + BC² = AD² + BD² + <b>2CD²</b>　← 注意这里凑出了两个 CD²<br>\n<b>④ 代入条件：</b>把每个 CD² 换成 AD·BD：<br>\n　　= AD² + BD² + 2AD·BD = <b>(AD + BD)²</b> = AB²　← 完全平方公式，而 AD + BD 正好是 AB<br>\n<b>⑤ 收尾：</b>∴ AC² + BC² = AB²，∴ ∠BCA = 90°，△ABC 是直角三角形。∎\n</p>\n"
+    },
+    {
+      "kind": "quiz",
+      "tag": "一·题眼",
+      "title": "这道题的「题眼」是哪一步？",
+      "prompt": "在标准证法里，条件 CD² = AD·BD 是在哪一步用掉的？",
+      "options": [
+        {
+          "t": "第一步，写目标的时候就用掉了",
+          "ok": false,
+          "why": "第一步只写目标（要证什么），没有碰条件。"
+        },
+        {
+          "t": "第④步——把 2CD² 换成 2AD·BD，凑成 (AD+BD)² = AB²",
+          "ok": true,
+          "why": "对，这就是全题唯一需要动脑的地方。<b>CD² 在两条勾股式子里各出现一次，一共凑出 2CD²；把每个 CD² 换成 AD·BD，就刚好凑成完全平方公式，而 AD+BD 恰好等于 AB。</b>规律是：<b>题目特意给的条件，一定要让它「变形」成结论需要的样子。</b>"
+        },
+        {
+          "t": "用不上，这是个多余条件",
+          "ok": false,
+          "why": "数学题（尤其是压轴题）的条件几乎不会多余。题干专门补一句「且 CD²=AD·BD」，这种「特意给的条件」就是题眼。"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "一·提炼",
+      "title": "把这道题变成一句话能力",
+      "html": "\n<p style=\"background:#eefaf3;border-left:4px solid #1f9d6b;padding:10px 12px\">\n<b>「证明直角三角形」三件事：</b><br>\n① 一看到「求证是直角三角形」→ 先写「只需证 a² + b² = c²」（勾股定理<b>逆定理</b>，也就是倒着用）<br>\n② 把两条较短边的平方，各自用它们所在的直角三角形展开<br>\n③ 相加，再看能不能凑出最长边的平方（常见手法：代入条件、配方）\n</p>\n<p>这道题她丢 12 分，根子不是不会算，而是<b>不知道该往哪个方向推</b>。</p>\n"
+    },
+    {
+      "kind": "read",
+      "tag": "二·起步",
+      "title": "动点题开工第一件事：画一张「线段表」",
+      "html": "\n<p>动点题之所以难，是因为题目用<b>时间 t</b> 说话，而几何关系用<b>长度</b>说话。两者之间必须翻译。</p>\n<p style=\"background:#fff8e1;border-left:4px solid #e6a817;padding:10px 12px\">\nP 从 A 出发，以 1 cm/s 向右运动 → <b>AP = t</b><br>\nAB = 10 → <b>BP = 10 − t</b>　← 这一行才是分数所在\n</p>\n<p><b>就像换外币：t 是「时间」，BP 是「长度」，中间要换算。</b>\n她的问题就是在这一步断了——算出长度就直接当 t 用。</p>\n"
+    },
+    {
+      "kind": "quiz",
+      "tag": "二·换算热身",
+      "title": "先热个身",
+      "prompt": "线段 AB = 10，点 P 从 A 出发向 B 移动，AP = t。那么 BP 等于多少？",
+      "options": [
+        {
+          "t": "10 − t",
+          "ok": true,
+          "why": "对。整条 AB 被 P 分成两段：AP + PB = AB → t + BP = 10 → <b>BP = 10 − t</b>。以后只要写了「AP = t」，就应该顺手在旁边写下「BP = 10 − t」——这是动点题的下意识动作。"
+        },
+        {
+          "t": "t",
+          "ok": false,
+          "why": "t 是 AP，不是 BP。这正是题 18 里她踩的坑：算出 BP = 3，就顺手写了 t = 3。"
+        },
+        {
+          "t": "10 + t",
+          "ok": false,
+          "why": "P 在 A、B 之间，两段加起来才是 10，BP 不可能比 10 还大。"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "二·题18原题",
+      "title": "附加题：四边形里的动点",
+      "html": "<img src=\"e0915_q18_stem.jpg\" style=\"width:100%;max-width:520px;border:1px solid #ddd;border-radius:8px;display:block;margin:12px auto\">\n<p><b>人话版题意：</b>四边形 ABCD 里，AB 和 CD 平行且都是 10，BC = AD = 4，∠DCB = 90°\n（其实就是个长 10、宽 4 的矩形）。E 是 CD 边上一点，DE = 7，所以 <b>CE = 10 − 7 = 3</b>。</p>\n<p>动点 P 从 <b>A</b> 出发，以每秒 1 个单位的速度沿 AB 向 B 运动，运动时间是 t 秒。</p>\n<p>(1) 求 BE 的长；(2) 如果 △BPE 是直角三角形，求 t 的值。</p>\n"
+    },
+    {
+      "kind": "quiz",
+      "tag": "二·第1问",
+      "title": "第 (1) 问：她做对了",
+      "prompt": "CE = 3，CB = 4，那么 BE = ？",
+      "options": [
+        {
+          "t": "5",
+          "ok": true,
+          "why": "对。Rt△BCE 中 BE² = CE² + CB² = 9 + 16 = 25 → <b>BE = 5</b>（经典 3-4-5）。她把这一问做对了，还拿到了 2 分——说明<b>「勾股定理正着用」完全没问题</b>。"
+        },
+        {
+          "t": "7",
+          "ok": false,
+          "why": "7 是 DE 的长度。用勾股要的是 CE = 3（CE = CD − DE = 10 − 7）。"
+        },
+        {
+          "t": "√7",
+          "ok": false,
+          "why": "勾股定理是「平方和」，不是把两条边直接相加。「3 和 4 的平方和是 25，开方是 5」。"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "二·她的(2)",
+      "title": "第 (2) 问：她的答案错在哪",
+      "html": "<img src=\"e0915_q18_mine.jpg\" style=\"width:100%;max-width:470px;border:1px solid #ddd;border-radius:8px;display:block;margin:12px auto\">\n<p>她写的是：<b>「① 当 ∠EPB = 90°……四边形 BCEP 是矩形，∴ BP = CE = 3，∴ t = 3」</b></p>\n<p>这句话里其实藏了两个错——一个小的，一个大的。我们一个一个抓。</p>\n"
+    },
+    {
+      "kind": "quiz",
+      "tag": "二·换算实战",
+      "title": "小错：BP = 3，那 t 等于几？",
+      "prompt": "她算出 BP = 3，然后写下「∴ t = 3」。你认为正确的是？",
+      "options": [
+        {
+          "t": "t = 3",
+          "ok": false,
+          "why": "BP 是「长度」，t 是「P 走了多远」（也就是 AP）。两者不是一回事。"
+        },
+        {
+          "t": "t = 7",
+          "ok": true,
+          "why": "对！AP + PB = AB → t + 3 = 10 → <b>t = 7</b>。她算出 BP = 3 这一步是对的（PE ⊥ AB 时 P 确实在 E 的正下方，BP = CE = 3），但把「长度」直接当「时间」写下去，整问就废了。<b>这是动点题的第一道坎，也是她今天最大的失分点。</b>"
+        },
+        {
+          "t": "t = 10",
+          "ok": false,
+          "why": "10 是整条 AB 的长。P 到 B 就停，不会再往下走。"
+        }
+      ]
+    },
+    {
+      "kind": "quiz",
+      "tag": "二·大错",
+      "title": "大错：她只写了一种情况",
+      "prompt": "题目只说「△BPE 是直角三角形」，那么直角可能出现在哪个顶点？",
+      "options": [
+        {
+          "t": "肯定在 P，就是 ∠EPB = 90°",
+          "ok": false,
+          "why": "这就是她的假设。但题目<b>没有说直角在哪个顶点</b>——必须三个顶点都考虑。"
+        },
+        {
+          "t": "P、E、B 三个顶点都要试一遍",
+          "ok": true,
+          "why": "对。「直角三角形」没说直角在哪，就是三种情况：<br>① ∠BPE = 90°　② ∠BEP = 90°　③ ∠PBE = 90°<br><b>分类讨论不是「可选项」，它是题目的一部分。</b>漏一种，就等于没做完。"
+        },
+        {
+          "t": "直角一定在 B，因为 B 是动点的终点",
+          "ok": false,
+          "why": "没有这样的规律，别猜。"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "二·三种情况",
+      "title": "三种情况，一个一个过",
+      "html": "\n<p><b>① ∠BPE = 90°（直角在 P）：</b>PB 沿着 AB（水平方向），PE ⊥ PB → P 在 E 的正下方 → BP = CE = 3 → \n<b>t = 10 − 3 = 7</b></p>\n<p><b>② ∠BEP = 90°（直角在 E）：</b>BE ⊥ PE。设 BP = m（则 m = 10 − t）。<br>\n　　Rt△BEP 中（斜边是 BP）：EP² = m² − BE² = m² − 25<br>\n　　过 E 向 AB 作垂线，垂足记作 F，则 EF = 4，FP = m − 3 → EP² = (m − 3)² + 16<br>\n　　两式相等：m² − 25 = (m − 3)² + 16 → m² − 25 = m² − 6m + 25 → <b>m = 25/3</b> → t = 10 − 25/3 = <b>5/3</b></p>\n<p><b>③ ∠PBE = 90°（直角在 B）：</b>PB 沿水平方向，要垂直就得 BE 竖直，但 E 在 B 的右上方 → <b>不可能，无解。</b></p>\n<p style=\"background:#eefaf3;border-left:4px solid #1f9d6b;padding:10px 12px\">\n所以正确答案是 <b>t = 7 或 t = 5/3</b>。她只写了 t = 3——<b>既算错了换算，又漏了一种情况。</b>\n</p>\n"
+    },
+    {
+      "kind": "read",
+      "tag": "二·附加题2",
+      "title": "再看那道填空题",
+      "html": "<img src=\"e0915_q2_stem.jpg\" style=\"width:100%;max-width:520px;border:1px solid #ddd;border-radius:8px;display:block;margin:12px auto\"><img src=\"e0915_q2_fig.jpg\" style=\"width:100%;max-width:520px;border:1px solid #ddd;border-radius:8px;display:block;margin:12px auto\">\n<p><b>题意：</b>等腰三角形 ABC，底边 BC = 16 cm，腰 AB = AC = 10 cm。动点 P 从 B 出发沿底边向 C 以\n1 cm/s 的速度移动，问：<b>当 P 运动多少秒时，△ACP 是直角三角形？</b></p>\n<p>先做准备工作：作底边上的高 AD。因为等腰三角形三线合一，D 是 BC 中点 → BD = DC = 8，<b>AD = 6</b>\n（6-8-10 勾股数）。</p>\n"
+    },
+    {
+      "kind": "quiz",
+      "tag": "二·CP换算",
+      "title": "先换算：CP 等于多少？",
+      "prompt": "BP = t，BC = 16，那么 CP = ？",
+      "options": [
+        {
+          "t": "16 − t",
+          "ok": true,
+          "why": "对。BP + PC = BC → t + CP = 16 → <b>CP = 16 − t</b>。老师在卷面旁边写的「PD = 8 − t、CP = 16 − t」，强调的正是这一步换算——<b>跟题 18 的 t 是同一个病。</b>"
+        },
+        {
+          "t": "t",
+          "ok": false,
+          "why": "t 是 BP。CP 是另一段。"
+        },
+        {
+          "t": "8 − t",
+          "ok": false,
+          "why": "8 是 BD（底边的一半），所以 PD = 8 − t 是「P 到中点」的距离。CP 是右边的整段，要把 DC = 8 也算上。"
+        }
+      ]
+    },
+    {
+      "kind": "quiz",
+      "tag": "二·直角位置",
+      "title": "△ACP 的直角，可能在哪儿？",
+      "prompt": "等腰△ABC 中，P 在底边 BC 上。要使 △ACP 是直角三角形，直角可能出现的位置是？",
+      "options": [
+        {
+          "t": "只能在 P 处",
+          "ok": false,
+          "why": "不一定，A 处也要查一查。"
+        },
+        {
+          "t": "可能在 P，也可能在 A；在 C 处不可能",
+          "ok": true,
+          "why": "对。在 C 处不可能：∠ACP 就是原三角形的底角 ∠ACB，等腰三角形的底角一定是锐角，不可能是 90°。<b>先把不可能的排除，能少算一大截——这也是分类讨论的技巧。</b>剩下的 P、A 两处都要算。"
+        },
+        {
+          "t": "三处都有可能",
+          "ok": false,
+          "why": "在 C 处不可能（底角是锐角），直接排除。"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "二·两种解",
+      "title": "把两种情况都算出来",
+      "html": "\n<p><b>① ∠APC = 90°（直角在 P）：</b>AP ⊥ BC。而 AD 也是 ⊥ BC，过 A 只有一条垂线 →\nP 与 D 重合 → BP = BD = 8 → <b>t = 8</b></p>\n<p><b>② ∠PAC = 90°（直角在 A）：</b>设 BP = t，则 CP = 16 − t，PD = 8 − t（先假设 P 在中点左边）。<br>\n　　Rt△APD：AP² = AD² + DP² = 36 + (t − 8)²<br>\n　　Rt△APC：AP² + AC² = PC² → 36 + (t − 8)² + 100 = (16 − t)²<br>\n　　展开：36 + t² − 16t + 64 + 100 = 256 − 32t + t² → 200 − 16t = 256 − 32t → 16t = 56 → <b>t = 3.5</b></p>\n<p style=\"background:#fff8e1;border-left:4px solid #e6a817;padding:10px 12px\">\n<b>答案是 t = 8 或 t = 3.5。</b><br>\n卷面上她填的就是这两个数——但题目最后一行写着「<b>简要步骤：</b>」，她一个字没写，\n所以这题的分丢在「<b>会想，但没写清楚</b>」上。<b>附加题不只考「想到」，还考「写明白」。</b>\n</p>\n"
+    },
+    {
+      "kind": "read",
+      "tag": "三·三板斧",
+      "title": "最后一块：翻折（折叠）题的三板斧",
+      "html": "\n<p>题 19 三小问全空。原因不是不会算，而是<b>不知道从哪儿下手</b>。翻折题其实高度套路化：</p>\n<p style=\"background:#f2f7ff;border-left:4px solid #4a7dbd;padding:10px 12px\">\n<b>斧① 搬等量：</b>翻折前后是两个全等图形 → 对应边相等、对应角相等<br>\n　　（如把 △ABP 沿 AP 翻折成 △AEP：AE = AB、PE = PB、∠AEP = ∠B = 90°）<br>\n<b>斧② 设未知数：</b>把要求的线段设成 x（经常设 BP = x）<br>\n<b>斧③ 列勾股方程：</b>翻折后一定会冒出新的直角三角形，把 x 代进去列方程\n</p>\n<p><b>这三斧子下去，翻折题基本就变成「解一元二次/一元一次方程」了。</b></p>\n"
+    },
+    {
+      "kind": "read",
+      "tag": "三·题19原题",
+      "title": "附加题：矩形里的三次翻折",
+      "html": "<img src=\"e0915_q19_stem.jpg\" style=\"width:100%;max-width:520px;border:1px solid #ddd;border-radius:8px;display:block;margin:12px auto\"><img src=\"e0915_q19_figs.jpg\" style=\"width:100%;max-width:520px;border:1px solid #ddd;border-radius:8px;display:block;margin:12px auto\">\n<p><b>题意：</b>长方形 ABCD，AB = CD = 10，BC = AD = 8。\nP 是 BC 边上一点，把 △ABP 沿直线 AP 翻折到 △AEP 的位置（B 落到 E）。</p>\n<p>(1)① E 落在边 CD 上时，求 BP；② 另一种翻折位置，已知 FC = FE，求 BP；(2) 换成沿 CQ 翻折，求 BQ。</p>\n"
+    },
+    {
+      "kind": "quiz",
+      "tag": "三·搬等量",
+      "title": "斧①：能搬出哪些等量？",
+      "prompt": "把 △ABP 沿 AP 翻折成 △AEP，已知 AB = 10、BC = 8。马上能写出哪些等式？",
+      "options": [
+        {
+          "t": "AE = AB = 10，PE = PB，∠AEP = ∠B = 90°",
+          "ok": true,
+          "why": "对！翻折就是「全等搬家」：<b>AE = AB = 10</b>（这条让 E 的位置确定下来）；<b>PE = PB</b>（这条最关键，它把未知数 x 和别的线段连起来）；<b>∠AEP = ∠B = 90°</b>（这条保证了后面有直角三角形可用）。"
+        },
+        {
+          "t": "只知道 AE = 10，别的都不确定",
+          "ok": false,
+          "why": "少搬了。特别是 <b>PE = PB</b>——这是后面能列出方程的关键。翻折题的分数就藏在「等量搬全了没有」。"
+        },
+        {
+          "t": "翻折之后图形的面积变大了",
+          "ok": false,
+          "why": "翻折是全等变换，面积、周长、边长都不变。"
+        }
+      ]
+    },
+    {
+      "kind": "quiz",
+      "tag": "三·设x列方程",
+      "title": "斧②③：(1)① 动手做",
+      "prompt": "E 落在 CD 上。设 BP = x，则 PE = x，PC = 8 − x，CE = 10 − DE = 10 − 6 = 4。方程该怎么列？",
+      "options": [
+        {
+          "t": "在 Rt△PCE 中：PE² = PC² + CE² → x² = (8 − x)² + 16",
+          "ok": true,
+          "why": "对。翻折后 ∠AEP = 90°，E 在 CD 上、P 在 BC 上，所以 △PCE 是直角三角形（∠PCE = 90°）→ 勾股列方程。<br>解：x² = 64 − 16x + x² + 16 → 16x = 80 → <b>x = 5</b>。"
+        },
+        {
+          "t": "在 Rt△ADE 中列方程",
+          "ok": false,
+          "why": "Rt△ADE 只能求出 DE = 6（AE = 10、AD = 8），进而得到 CE = 4。它是<b>准备工作</b>，里面没有 x，列不出方程。"
+        },
+        {
+          "t": "用相似三角形来列",
+          "ok": false,
+          "why": "翻折题的标准武器是「勾股 + 方程」。相似是初三的内容，现在混进来只会更乱。"
+        }
+      ]
+    },
+    {
+      "kind": "read",
+      "tag": "三·答案",
+      "title": "三小问的答案与思路（能力题，先懂套路）",
+      "html": "\n<p><b>(1)① BP = 5</b>　—— 详见上一步，标准三斧（搬等量 → 设 x → 勾股方程）。</p>\n<p><b>(1)② BP = 20/3</b>　—— 起手同样：设 BP = x，则 PE = x、PC = 8 − x。<br>\n用 FC = FE 得到等腰角关系（∠FCE = ∠FEC），配合 ∠AEF = 90°，可以推出 PF = FC = FE；\n再与勾股式联立，解得 x = 20/3。<b>这一步用到「等腰角 + 勾股」的组合，是期末压轴级难度——今天先不用强求做出来，知道它也是从三斧起步的就行。</b></p>\n<p><b>(2) BQ = 8</b>　—— Q 在射线 BA 上，B 翻折到 E 后落在直线 DC 上：CE = CB = 8（翻折搬等量）→\nE 在 C 左边 8 处；折痕 CQ 平分 ∠BCE（= 90°），所以 CQ 是 45° 斜线，与射线 BA 交于距 B 为 8 的点 → <b>BQ = 8</b>。</p>\n<p style=\"color:#c0392b\"><b>提醒：</b>(1)② 和 (2) 属于「能力题」，一张卷子做不出来很正常。\n但 (1)① 是<b>必拿</b>的——它就是把三斧走一遍，没有任何技巧。</p>\n"
+    },
+    {
+      "kind": "quiz",
+      "tag": "三·复述",
+      "title": "把三板斧复述一遍",
+      "prompt": "翻折题的通用三步是？",
+      "options": [
+        {
+          "t": "搬等量 → 设未知数 x → 找直角三角形列勾股方程",
+          "ok": true,
+          "why": "对，就是这三步。以后看到「翻折/折叠/沿某条线对折」，条件反射地走这三步。"
+        },
+        {
+          "t": "画辅助线 → 用相似 → 求面积",
+          "ok": false,
+          "why": "相似超纲，而且翻折题不需要额外辅助线——翻折本身已经把图形给你造好了。"
+        },
+        {
+          "t": "先算面积 → 再看角度 → 最后猜一个",
+          "ok": false,
+          "why": "这是放弃的走法，不是解法。"
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "tag": "收·四张卡",
+      "title": "带走这四张卡片",
+      "html": "\n<p style=\"background:#eefaf3;border-left:4px solid #1f9d6b;padding:10px 12px\">\n<b>卡 1 · 证直角三角形</b>：见「证直角」→ 先写「只需证 a² + b² = c²」，再把两条短边的平方各自展开、相加、凑出最长边的平方。</p>\n<p style=\"background:#fff8e1;border-left:4px solid #e6a817;padding:10px 12px\">\n<b>卡 2 · 动点换算</b>：写下「AP = t」的下一行必须是「BP = 10 − t」。<b>求出来的是长度，题目问的是 t，中间必须换算。</b></p>\n<p style=\"background:#eef4ff;border-left:4px solid #4a7dbd;padding:10px 12px\">\n<b>卡 3 · 分类讨论</b>：看到「是直角三角形 / 等腰三角形」却没指明位置 → 先把所有情况列全（按顶点、按腰），逐一排除不可能的，再逐个算。</p>\n<p style=\"background:#fdf0f6;border-left:4px solid #c060a0;padding:10px 12px\">\n<b>卡 4 · 翻折三板斧</b>：搬等量 → 设 x → 勾股方程。翻折题 90% 都是这三步。</p>\n"
+    },
+    {
+      "kind": "summary",
+      "tag": "收·练法",
+      "title": "这两周的练法（家长版）",
+      "html": "\n<p><b>1. 基础卷继续保持。</b>88/100 说明基础题已经稳，没必要再刷基础卷。</p>\n<p><b>2. 每天 1 道动点题，只练「线段表」（约 3 分钟）。</b>\n不看答案、不求结果，只写出：AP = ?、BP = ?、CP = ? 各等于多少。\n<b>如果她做题时没有这一行，就说明套路还没进脑子。</b></p>\n<p><b>3. 每天 1 道翻折题，只练「起手式」（约 5 分钟）。</b>\n翻折后先写出 3 条等量（哪条边相等、哪个角相等），再设 x 列方程。</p>\n<p><b>4. 做配套练习卷（6 题，限时 40 分钟）</b>，做完拍照给老师看。\n重点检查练习 2、3、5 有没有先写「线段用 t 表示」。</p>\n<p><b>5. 附加题的规范：</b>答案后面记得把「简要步骤」写出来（哪怕只有两行）。\n<b>今天附加题 2 的 8 和 3.5 其实都算对了，分是丢在没写步骤上。</b></p>\n"
+    }
+  ]
+};
+window.COURSE = COURSE;
+
+
+/* ===================== 渲染引擎（一般不用改） ===================== */
+const stage = document.getElementById('stage');
+document.getElementById('courseTitle').textContent = COURSE.title;
+document.getElementById('courseSub').textContent = COURSE.subtitle;
+const bar = document.getElementById('bar');
+let cur = 0;
+
+function scrollTop(){
+  const el = document.querySelector('.wrap');
+  if (el && el.scrollIntoView) { try{ el.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){} }
+}
+
+function render(i){
+  cur = i;
+  const total = COURSE.steps.length;
+  bar.style.width = Math.round((i)/(total-1)*100) + '%';
+  stage.innerHTML = '';
+  const s = COURSE.steps[i];
+  const card = document.createElement('div');
+  card.className = 'step active';
+  let inner = '';
+  if (s.tag) inner += `<span class="tag">${s.tag}</span>`;
+  inner += `<h2>${s.title}</h2>`;
+  if (s.kind === 'quiz'){
+    inner += `<p>${s.prompt}</p><div class="opts" id="opts"></div><div class="fb" id="fb"></div>`;
+  } else {
+    inner += s.html || '';
+  }
+  // 导航按钮
+  const isLast = (i === total-1);
+  inner += `<div class="nav">`;
+  inner += i>0 ? `<button class="btn btn-back" id="back">← 上一步</button>` : `<span></span>`;
+  if (!isLast){
+    inner += `<button class="btn btn-next" id="next">下一步 →</button>`;
+  } else if (s.kind !== 'summary'){
+    inner += `<button class="btn btn-next" id="next">完成 ✓</button>`;
+  } else {
+    inner += `<span></span>`;
+  }
+  inner += `</div>`;
+  card.innerHTML = inner;
+  stage.appendChild(card);
+
+  if (s.kind === 'quiz') buildQuiz(s, card);
+  // 绑定导航
+  const nextBtn = card.querySelector('#next');
+  if (nextBtn){
+    if (s.kind === 'quiz'){ nextBtn.disabled = true; } // 答题后才解锁
+    nextBtn.addEventListener('click', ()=>{ if(!nextBtn.disabled) render(i+1); });
+  }
+  const backBtn = card.querySelector('#back');
+  if (backBtn) backBtn.addEventListener('click', ()=> render(i-1));
+  scrollTop();
+}
+
+function buildQuiz(s, card){
+  const optsBox = card.querySelector('#opts');
+  const fb = card.querySelector('#fb');
+  const nextBtn = card.querySelector('#next');
+  s.options.forEach((o, idx)=>{
+    const div = document.createElement('div');
+    div.className = 'opt';
+    div.innerHTML = `<span class="mk">${String.fromCharCode(65+idx)}</span><span>${o.t}</span>`;
+    div.addEventListener('click', ()=>{
+      // 锁定所有选项（避免重复点）
+      optsBox.querySelectorAll('.opt').forEach(el=>{ el.classList.add('locked'); });
+      // 先启用"下一步"（关键：绝不被反馈 handler 卡住）
+      if (nextBtn) nextBtn.disabled = false;
+      // 标出对错
+      div.classList.add(o.ok ? 'correct' : 'wrong', 'chosen');
+      if (!o.ok){
+        // 顺便高亮正确答案，让学生看到正解
+        optsBox.querySelectorAll('.opt').forEach((el,k)=>{ if(s.options[k].ok) el.classList.add('correct'); });
+      }
+      // 揭示评语（try/catch 兜底）
+      try{
+        fb.className = 'fb show ' + (o.ok ? 'ok' : 'bad');
+        fb.innerHTML = (o.ok ? '✅ <b>答对了：</b>' : '⚠️ <b>再看一眼：</b>') + o.why;
+      }catch(e){ /* 反馈出错也不影响下一步 */ }
+      scrollTop();
+    });
+    optsBox.appendChild(div);
+  });
+}
+
+render(0);
+</script>
+</body>
+</html>
