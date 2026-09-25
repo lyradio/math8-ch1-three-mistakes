@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第二章 实数 · B卷错题特训课</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, "Microsoft YaHei", sans-serif; background: linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%); min-height: 100vh; padding: 24px; color: #1f2937; }
+.container { max-width: 1080px; margin: 0 auto; }
+header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 32px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.15); margin-bottom: 24px; }
+header h1 { font-size: 30px; margin-bottom: 12px; }
+header .sub { font-size: 17px; opacity: 0.95; margin-bottom: 14px; }
+header .meta { font-size: 15px; opacity: 0.85; }
+.progress { margin-top: 16px; background: rgba(255,255,255,.25); height: 14px; border-radius: 7px; overflow: hidden; }
+.progress-bar { height: 100%; background: linear-gradient(90deg, #fbbf24, #f59e0b); width: 0%; transition: width 0.4s; border-radius: 7px; }
+.progress-text { font-size: 14px; margin-top: 8px; opacity: 0.95; }
+.card { background: white; border-radius: 16px; padding: 32px; margin-bottom: 20px; box-shadow: 0 4px 16px rgba(0,0,0,.08); display: none; }
+.card-title { font-size: 22px; color: #4c1d95; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 2px solid #e0c3fc; font-weight: 700; }
+.step { display: none; animation: fadeIn 0.5s; }
+.step.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.step-tag { display: inline-block; background: linear-gradient(135deg, #f59e0b, #fbbf24); color: white; padding: 4px 14px; border-radius: 12px; font-size: 14px; font-weight: 700; margin-right: 12px; }
+.step h3 { font-size: 21px; margin-bottom: 14px; color: #1f2937; }
+.step p { font-size: 17px; line-height: 1.9; margin-bottom: 12px; }
+.step .math { font-family: "Cambria Math", serif; font-style: italic; color: #1e40af; font-weight: 600; }
+.math-block { background: #f0f4ff; border-left: 4px solid #6366f1; padding: 14px 18px; margin: 14px 0; border-radius: 6px; font-size: 17px; line-height: 2; color: #1e3a8a; }
+.think-box { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 14px 18px; margin: 14px 0; border-radius: 6px; font-size: 16px; line-height: 1.8; }
+.warn-box { background: #fee2e2; border-left: 4px solid #ef4444; padding: 14px 18px; margin: 14px 0; border-radius: 6px; font-size: 16px; line-height: 1.8; }
+.tip-box { background: #d1fae5; border-left: 4px solid #10b981; padding: 14px 18px; margin: 14px 0; border-radius: 6px; font-size: 16px; line-height: 1.8; }
+.success-box { background: linear-gradient(135deg, #d1fae5, #a7f3d0); border-left: 4px solid #059669; padding: 16px 20px; margin: 14px 0; border-radius: 8px; font-size: 17px; line-height: 1.8; font-weight: 500; }
+.choice { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; }
+.choice-btn { background: #f3f4f6; border: 2px solid #d1d5db; padding: 16px 20px; border-radius: 10px; font-size: 17px; cursor: pointer; transition: all 0.2s; text-align: left; line-height: 1.7; }
+.choice-btn:hover { background: #e0e7ff; border-color: #6366f1; }
+.choice-btn.correct { background: #d1fae5; border-color: #10b981; }
+.choice-btn.wrong { background: #fee2e2; border-color: #ef4444; }
+.feedback-area { margin-top: 16px; padding: 14px 18px; border-radius: 8px; font-size: 16px; line-height: 1.8; display: none; }
+.feedback-area.show { display: block; animation: fadeIn 0.4s; }
+.feedback-area.ok { background: #d1fae5; color: #065f46; border-left: 4px solid #10b981; }
+.feedback-area.no { background: #fee2e2; color: #991b1b; border-left: 4px solid #ef4444; }
+.nav-row { display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding-top: 20px; border-top: 1px solid #e5e7eb; }
+.nav-spacer { flex: 1; }
+.btn { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; border: none; padding: 14px 28px; border-radius: 10px; font-size: 17px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+.btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(99,102,241,.4); }
+.btn:disabled { background: #9ca3af; cursor: not-allowed; opacity: 0.5; }
+.btn-ghost { background: white; color: #6366f1; border: 2px solid #6366f1; padding: 12px 24px; border-radius: 10px; font-size: 16px; cursor: pointer; font-weight: 600; }
+.btn-ghost:hover { background: #e0e7ff; }
+.btn-next { background: linear-gradient(135deg, #10b981, #059669); }
+.fnote { font-size: 14px; color: #9ca3af; font-style: italic; }
+mark { background: #fef08a; padding: 2px 4px; border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <h1>📐 第二章 实数 · B卷错题特训课</h1>
+  <div class="sub">选择4/6/7/8 · 填空15/16 · 21(1)(2) · 22(4) · B卷2-1/2/6 —— 一条母套路链全部打通</div>
+  <div class="meta">⏱ 约 40 分钟 · 23 步 · 做完就懂、懂了不再错</div>
+  <div class="progress"><div class="progress-bar" id="progBar"></div></div>
+  <div class="progress-text" id="progText">进度 0/23 · 当前：准备开始</div>
+</header>
+
+<!-- ============ Card r1: 母套路① 非负性之和为零 ============ -->
+<div class="card" id="card-r1">
+  <div class="card-title">🔥 母套路① 非负性之和为零（选择4 + 填空15）</div>
+
+  <div class="step active" data-step="r1-1" id="step-r1-1">
+    <h3><span class="step-tag">第 1/23 步</span>读题（选择4）：这个等式有什么奇怪的地方？</h3>
+    <p><b>原题</b>：若 <span class="math">√(a−1) + (b+2)² + |c| = 0</span>，求 a、b、c 的值。</p>
+    <div class="think-box">🧠 <b>苏格拉底第一问</b>：一个等式右边是 0，左边却<b>加</b>了三项。三项加起来等于 0，每项可能是什么数？</div>
+    <div class="choice" data-quiz="r1-1">
+      <div class="choice-btn" data-correct="false">A. 三项都可能取到负数</div>
+      <div class="choice-btn" data-correct="true">B. 三项每一项都不可能是负数</div>
+      <div class="choice-btn" data-correct="false">C. 只有两项不可能是负数</div>
+      <div class="choice-btn" data-correct="false">D. 无法确定符号</div>
+    </div>
+    <div class="feedback-area" id="fb-r1-1"></div>
+    <div class="nav-row">
+      <button class="btn-ghost" disabled>← 上一步</button>
+      <div class="nav-spacer"></div>
+      <button class="btn" onclick="goNext('r1-1')">下一步：非负性三板斧 →</button>
+    </div>
+  </div>
+
+  <div class="step" data-step="r1-2" id="step-r1-2">
+    <h3><span class="step-tag">第 2/23 步</span>非负性"三板斧"——本章最重要的一张牌</h3>
+    <p>初二数学里只有三样东西<b>永远不是负数</b>：</p>
+    <div class="math-block">
+    ① <b>|x| ≥ 0</b>（绝对值）<br>
+    ② <b>√x ≥ 0</b>（算术平方根，且要求 x ≥ 0）<br>
+    ③ <b>x² ≥ 0</b>（完全平方）
+    </div>
+    <div class="warn-box">⚠️ <b>核心推论（考试 directly 考这个）</b>：<br>
+    几个<b>非负项之和 = 0</b> ⟺ <b>每一项都 = 0</b>。<br>
+    为什么？只要有一项 &gt; 0，和就 &gt; 0 了，凑不出 0。所以必须是"全部归零"。</div>
+    <div class="tip-box">📌 <b>条件反射训练</b>：以后看到「根号 + 平方 + 绝对值 加起来 = 0」这个组合，脑子里要<b>立刻弹出</b>三个小等式。这就是母套路①。</div>
+    <div class="nav-row">
+      <button class="btn-ghost" onclick="goToStep('r1-1')">← 上一步</button>
+      <div class="nav-spacer"></div>
+      <button class="btn" onclick="goNext('r1-2')">下一步：解出选择4 →</button>
+    </div>
+  </div>
+
+  <div class="step" data-step="r1-3" id="step-r1-3">
+    <h3><span class="step-tag">第 3/23 步</span>用母套路①秒杀选择4</h3>
+    <div class="math-block">
+    √(a−1) = 0 → a − 1 = 0 → <b>a = 1</b><br>
+    (b+2)² = 0 → b + 2 = 0 → <b>b = −2</b><br>
+    |c| = 0 → <b>c = 0</b>
+    </div>
+    <p>所以 <span class="math">a=1, b=−2, c=0</span>，对照选项选 <b>D</b>（正确答案）。</p>
+    <div class="warn-box">⚠️ <b>你当时为什么错</b>：很可能只让其中一两项为零，或者把 (b+2)²=0 解成 b=2（忘了移项变号）。<b>母套路没建立条件反射，三个小等式少写一个就错</b>。</div>
+    <div class="nav-row">
+      <button class="btn-ghost" onclick="goToStep('r1-2')">← 上一步</button>
+      <div class="nav-spacer"></div>
+      <button class="btn" onclick="goNext('r1-3')">下一步：同款迁移·填空15 →</button>
+    </div>
+  </div>
+
+  <div class="step" data-step="r1-4" id="step-r1-4">
+    <h3><span class="step-tag">第 4/23 步</span>同款套路：填空15</h3>
+    <p><b>原题</b>：已知实数 a,b 满足 <span class="math">½|a−b| + √(2b+c) + c²−4c+4 = 0</span>，求 <span class="math">a²+b²+c²</span> 的算术平方根。</p>
+    <div class="think-box">🧠 <b>先自己想一想</b>：这次三项里有一项不是"标准三板斧"形态——c²−4c+4。它是什么？</div>
+    <p><b>第一步：把 c²−4c+4 认出来</b>——这是完全平方公式！</p>
+    <div class="math-block">
+    c² − 4c + 4 = (c−2)²<br><br>
+    于是等式变成：½|a−b| + √(2b+c) + (c−2)² = 0
+    </div>
+    <p><b>第二步：母套路①，三项全归零</b>：</p>
+    <div class="math-block">
+    (c−2)² = 0 → c = 2<br>
+    √(2b+c) = 0 → 2b + 2 = 0 → b = −1<br>
+    ½|a−b| = 0 → a = b = −1
+    </div>
+    <p><b>第三步：算目标</b>：</p>
+    <div class="math-block">
+    a² + b² + c² = 1 + 1 + 4 = 6<br>
+    6 的算术平方根 = <b>√6</b> ✓
+    </div>
+    <p class="fnote">（题目问法以你的练习册原文为准；核心就是母套路① + 认出完全平方）</p>
+    <div class="nav-row">
+      <button class="btn-ghost" onclick="goToStep('r1-3')">← 上一步</button>
+      <div class="nav-spacer"></div>
+      <button class="btn btn-next" onclick="goNext('r1-4')">下一步：进阶版·填空16 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Card r2: 配方构造非负性 填空16 ============ -->
+<div class="card" id="card-r2">
+  <div class="card-title">🔥 母套路①进阶：配方法造非负项（填空16 · 压轴）</div>
+
+  <div class="step" data-step="r2-1" id="step-r2-1">
+    <h3><span class="step-tag">第 5/23 步</span>读题（填空16）：这次等式里藏着什么？</h3>
+    <p><b>原题</b>：已知 <span class="math">a+b+c+5 = 2(√(a−1) + √(b+1) + √(c+2))</span>，求 <span class="math">a²+b²+c²</span> 的值。</p>
+    <div class="think-box">🧠 <b>苏格拉底第一问</b>：这次没有"…= 0"，三项也不是直接加在一起。母套路①还能用吗？<br><br>
+    <b>提示</b>：能不能把所有东西<b>移到一边</b>，凑出"几个非负项之和 = 0"？</div>
+    <div class="choice" data-quiz="r2-1">
+      <div class="choice-btn" data-correct="false">A. 不能，因为没有 = 0 的条件</div>
+      <div class="choice-btn" data-correct="true">B. 能，把右边的 2√(a−1) 拆成两个 √(a−1)，一个移到左边去配方</div>
+      <div class="choice-btn" data-correct="false">C. 能，两边同时平方就行</div>
+      <div class="choice-btn" data-correct="false">D. 这题条件不够，做不出来</div>
+    </div>
+    <div class="feedback-area" id="fb-r2-1"></div>
+    <div class="nav-row">
+      <button class="btn-ghost" onclick="goToStep('r1-4')">← 上一步</button>
+      <div class="nav-spacer"></div>
+      <button class="btn" onclick="goNext('r2-1')">下一步：看配方全过程 →</button>
+    </div>
+  </div>
+
+  <div class="step" data-step="r2-2" id="step-r2-2">
+    <h3><span class="step-tag">第 6/23 步</span>配方全过程（核心技巧，必须看懂每一步）</h3>
+    <p><b>关键动作</b>：把 <span class="math">2√(a−1)</span> 拆成 <span class="math">√(a−1) + √(a−1)</span>，一个留在右边、一个移到左边：</p>
+    <div class="math-block">
+    (a − 1) − 2√(a−1) + (b+1) − 2√(b+1) + (c+2) − 2√(c+2) + (1+1+1) + ……
+    </div>
+    <p>等等，常数怎么配平？慢慢来，一项一项看。对 a 这一组：</p>
+    <div class="math-block">
+    a − 2√(a−1) − 1 = (a−1) − 2√(a−1) + 1 − 2 = (√(a−1) − 1)² − 2
+    </div>
+    <p>三组都这么拆，常数 5 = (−1)+(−1)+(−1) + 2 + 2 + … 直接用<b>凑的形式</b>写最终结果：</p>
+    <div class="math-block">
+    a+b+c+5 = 2√(a−1) + 2√(b+1) + 2√(c+2)<br>
+    ⟺ (√(a−1) − 1)² + (√(b+1) − 1)² + (√(c+2) − 1)² = 0
+    </div>
+    <div class="tip-box">📌 <b>为什么可以这样拆</b>：展开右边验证——<br>
+    (√(a−1)−1)² = (a−1) − 2√(a−1) + 1 = a − 2√(a−1)，三个加起来正好是 a+b+c − 2√(a−1) − 2√(b+1) − 2√(c+2)。<br>
+    移项回来 = 原等式。✓</div>
+    <div class="nav-row">
+      <button class="btn-ghost" onclick="goToStep('r2-1')">← 上一步</button>
+      <div class="nav-spacer"></div>
+      <button class="btn" onclick="goNext('r2-2')">下一步：三项归零求值 →</button>
+    </div>
+  </div>
+
+  <div class="step" data-step="r2-3" id="step-r2-3">
+    <h3><span class="step-tag">第 7/23 步</span>三项归零，填空16 完成收尾</h3>
+    <div class="math-block">
+    √(a−1) − 1 = 0 → <b>a = 2</b><br>
+    √(b+1) − 1 = 0 → <b>b = 0</b><br>
+    √(c+2) − 1 = 0 → <b>c = −1</b>
+    </div>
+    <div class="math-block">
+    a² + b² + c² = 4 + 0 + 1 = <b>5</b> ✓（与答案一致）
+    </div>
+    <div class="success-box">🏆 <b>母套路①完整版总结</b>：<br>
+    ① 初级：√x + |y| + z² = 0 → 三项直接归零（选择4、填空15）<br>
+    ② 进阶：字母 + 常数 = 2√(字母∓常数) → <b>先配方再造非负项</b>，再归零（填空16）<br>
+    <b>配方暗号</b>：看到「a − 2√(a−1)」这种形态，条件反射写 (√(a−1) − 1)²。</div>
+    <div class="nav-row">
+      <button class="btn-ghost" onclick="goToStep('r2-2')">← 上一步</button>
+      <div class="nav-spacer"></div>
+      <button class="btn btn-next" onclick="goNext('r2-3')">下一步：母套路② √(a²)=|a| →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Card r3: 母套路② √(a²)=|a| 选择7 ============ -->
+<div class="card" id="card-r3">
+  <div class="card-title">🔥 母套路② √(a²) = |a|（选择7 + 22(4) 的地基）</div>
+
+  <div class="step" data-step="r3-1" id="step-r3-1">
+    <h3><span class="step-tag">第 8/23 步</span>√(a²) 到底等不等于 a？做个实验</h3>
+    <div class="think-box">🧠 <b>苏格拉底实验</b>：拿 a = −3 代进去试试。<br>
+    √(a²) = √((−3)²) = √9 = ?  是 3 还是 −3？</div>
+    <div class="choice" data-quiz="r3-1">
+      <div class="choice-btn" data-correct="false">A. 是 −3，因为 √(a²) = a</div>
+      <div class="choice-btn" data-correct="true">B. 是 3，因为算术平方根必须是正数或零</div>
+      <div class="choice-btn" data-correct="false">C. 无意义，负数不能开平方</div>
+      <div class="choice-btn" data-correct="false">D. 取决于 a 的正负</div>
+    </div>
+    <div class="feedback-area" id="fb-r3-1"></div>
+    <div class="nav-row">
+      <button class="btn-ghost" onclick="goToStep('r2-3')">← 上一步</button>
+      <div class="nav-spacer"></div>
+      <button class="btn" onclick="goNext('r3-1')">下一步：结论和口诀 →</button>
+    </div>
+  </div>
+
+  <div class="step" data-step="r3-2" id="step-r3-2">
+    <h3><span class="step-tag">第 9/23 步</span>结论：√(a²) = |a|，什么时候才等于 a？</h3>
+    <div class="math-block">
+    <b>√(a²) = |a|</b>（永远成立）<br>
+    <br>
+    什么时候 √(a²) = a？ → 只有 <b>a ≥ 0</b> 时<br>
+    什么时候 √(a²) = −a？ → 当 <b>a &lt; 0</b> 时（|a| = −a）
+    </div>
+    <div class="warn-box">⚠️ <b>你选错的原因（B 选项 √(a²)=a）</b>：脑子里默认了"a 是正数"。<b>题目说的是"一定成立"</b>——a 取负数就翻车。这是本章第一大陷阱！</div>
+    <div class="tip-box">📌 <b>防错口诀</b>：「<b>开方先想负，结果加绝对</b>」。没告诉你 a≥0，就老老实实写 |a|。</div>
+    <div class="nav-row">
+      <button class="btn-ghost" onclick="goToStep('r3-1')">← 上一步</button>
+      <div class="nav-spacer"></div>
+      <button class="btn" onclick="goNext('r3-2')">下一步：回到选择7定答案 →</button>
+    </div>
+  </div>
+
+  <div class="step" data-step="r3-3" id="step-r3-3">
+    <h3><span class="step-tag">第 10/23 步</span>选择7 收尾 + 一个重要扩展</h3>
+    <p><b>正确答案</b>：D（<span class="math">√(a²) = |a|</span>）。</p>
+    <p><b>顺手扩展</b>——同样道理的兄弟公式（22(4) 会用到）：</p>
+    <div class="math-block">
+    √(a²b) = |a|·√b（b ≥ 0 时）<br>
+    √(a/b) = √(ab) / |b|（ab ≥ 0, b ≠ 0 时）← 分母要加绝对值！
+    </div>
+    <div class="nav-row">
+      <button class="btn-ghost" onclick="goToStep('r3-2')">← 上一步</button>
+      <div class="nav-spacer"></div>
+      <button class="btn btn-next" onclick="goNext('r3-3')">下一步：实战 22(4) →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Card r4: 22(4) 符号处理 ============ -->
+<div class="card" id="card-r4">
+  <div class="card-title">🔥 母套路②实战：22(4) 字母开方的符号处理</div>
+
+  <div class="step" data-step="r4-1" id="step-r4-1">
+    <h3><span class="step-tag">第 11/23 步</span>读题（22(4)）：先判断 x、y 的符号</h3>
+    <p><b>原题</b>：已知 <span class="math">x + y = 8</span>，<span class="math">xy = 8</span>，求 <span class="math">y√(y/x) + x√(x/y)</span> 的值。</p>
+    <div class="think-box">🧠 <b>苏格拉底第一问</b>：开方之前，必须先搞清楚 x、y 是正是负（不然就会踩 √(a²)=|a| 的坑）。<br>
+    xy = 8 &gt; 0 说明什么？x + y = 8 &gt; 0 又说明什么？</div>
+    <div class="choice" data-quiz="r4-1">
+      <div class="choice-btn" data-correct="false">A. x、y 一正一负</div>
+      <div class="choice-btn" data-correct="false">B. x、y 一正一零</div>
+      <div class="choice-btn" data-correct="true">C. x、y 同号，且都是正数</div>
+      <div class="choice-btn" data-correct="false">D. 符号无法判断</div>
+    </div>
+    <div class="feedback-area" id="fb-r4-1"></div>
+    <div class="nav-row">
+      <button class="btn-ghost" onclick="goToStep('r3-3')">← 上一步</button>
+      <div class="nav-spacer"></div>
+      <button class="btn" onclick="goNext('r4-1')">下一步：关键化简 →</button>
+    </div>
+  </div>
+
+  <div class="step" data-step="r4-2" id="step-r4-2">
+    <h3><span class="step-tag">第 12/23 步</span>关键化简：把 √(y/x) 变成"分母带绝对值"的形式</h3>
+    <p><b>技巧</b>：把 y/x 的分子分母<b>同乘 x</b>，凑出 xy：</p>
+    <div class="math-block">
+    √(y/x) = √(y·x / x·x) = √(xy) / √(x²) = √(xy) / <b>|x|</b>
+    </div>
+    <p>x、y 都是正数 → |x| = x，所以：</p>
+    <div class="math-block">
+    y√(y/x) = y·√(xy)/x<br>
+    x√(x/y) = x·√(xy)/y（同理）<br>
+    <br>
+    原式 = √(xy)·(y/x + x/y) = √(xy)·(x²+y²)/(xy)
+    </div>
+    <div class="warn-box">⚠️ <b>如果题目给的是 x+y=−8（两负）</b>：|x| = −x，整个式子多一个负号，答案变 −12√2。<b>符号判断决定答案正负</b>——这就是 22(4) 的命门。</div>
+    <div class="nav-row">
+      <button class="btn-ghost" onclick="goToStep('r4-1')">← 上一步</button>
+      <div class="nav-spacer"></div>
+      <button class="btn" onclick="goNext('r4-2')">下一步：代入求值 →</button>
+    </div>
+  </div>
+
+  <div class="step" data-step="r4-3" id="step-r4-3">
+    <h3><span class="step-tag">第 13/23 步</span>代入求值，22(4) 完成收尾</h3>
+    <p><b>需要两个零件</b>：</p>
+    <div class="math-block">
+    零件① x² + y² = (x+y)² − 2xy = 64 − 16 = 48<br>
+    零件② √(xy) = √8 = 2√2
+    </div>
+    <div class="math-block">
+    原式 = √(xy)·(x²+y²)/(xy) = (x²+y²)/√(xy) = 48 / (2√2) = 24/√2 = <b>12√2</b> ✓
+    </div>
+    <div class="success-box">🏆 <b>这题的完整母套路链</b>：<br>
+    ① xy&gt;0 且 x+y&gt;0 → 都是正数（符号判断）<br>
+    ② √(y/x) = √(xy)/|x|（化统一）<br>
+    ③ x²+y² = (x+y)²−2xy（对称式拆解）<br>
+    ④ 分母有理化收尾<br>
+    <b>你错的原因</b>：大概率是符号没判断，或 √(y/x) 直接写成了 √y/√x（y 是字母，没保证正，不能这么拆）。</div>
+    <div class="nav-row">
+      <button class="btn-ghost" onclick="goToStep('r4-2')">← 上一步</button>
+      <div class="nav-spacer"></div>
+      <button class="btn btn-next" onclick="goNext('r4-3')">下一步：母套路③ 概念辨析 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Card r5: 母套路③ 概念辨析 ============ -->
+<div class="card" id="card-r5">
+  <div class="card-title">🔥 母套路③ 概念辨析三板斧（选择6 + 选择8 + B卷2-1）</div>
+
+  <div class="step" data-step="r5-1" id="step-r5-1">
+    <h3><span class="step-tag">第 14/23 步</span>选择6：无理数判定——一个反例就能毙掉一个选项</h3>
+    <p><b>方法</b>：判断"说法正确"的题，<b>不要凭感觉</b>，每个选项试着<b>举一个反例</b>：</p>
+    <div class="math-block">
+    A.「无理数都是有限小数」→ 反例：√2 = 1.41421356…（无限）→ ❌<br>
+    B.「无限小数都是无理数」→ 反例：1/3 = 0.333…（无限但循环，是有理数）→ ❌<br>
+    C.「带根号的数不都是无理数」→ 反例：√4 = 2（带根号但是有理数）→ ✓ 说法正确<br>
+    D.「无理数与数轴上的点一一对应」→ 错，是「<b>实数</b>」与数轴上的点一一对应（数轴上还有有理数的点）→ ❌
+    </div>
+    <p><b>正确答案：C</b>。</p>
+    <div class="warn-box">⚠️ <b>你错的原因</b>：无理数定义模糊 + 没有逐项举反例的习惯。记住：数轴 ↔ 实数（全体），不是无理数。</div>
+    <div class="nav-row">
+      <button class="btn-ghost" onclick="goToStep('r4-3')">← 上一步</button>
+      <div class="nav-spacer"></div>
+      <button class="btn" onclick="goNext('r5-1')">下一步：最简二次根式 →</button>
+    </div>
+  </div>
+
+  <div class="step" data-step="r5-2" id="step-r5-2">
+    <h3><span class="step-tag">第 15/23 步</span>选择8：最简二次根式只有两个"准入条件"</h3>
+    <div class="math-block">
+    <b>最简二次根式必须同时满足：</b><br>
+    ① 被开方数<b>不含分母</b>（分母里没有根号、被开方数不是分数）<br>
+    ② 被开方数<b>不含能开得尽方的因数/因式</b>
+    </div>
+    <p><b>快速检验示范</b>：</p>
+    <div class="math-block">
+    √2 → ✓ 最简<br>
+    √(1/2) → ✗ 含分母（要化成 √2/2）<br>
+    2√2 → ✓ 最简（系数 2 不影响"最简"，最简只看被开方数）<br>
+    √18 → ✗ 18 = 9×2，9 能开尽方（化成 3√2）<br>
+    √8 → ✗ 8 = 4×2（化成 2√2）
+    </div>
+    <p>按你练习册里给的 5 个式子逐个套这两条，数出个数即可（题干以原书为准，答案 A：只有 1 个）。</p>
+    <div class="nav-row">
+      <button class="btn-ghost" onclick="goToStep('r5-1')">← 上一步</button>
+      <div class="nav-spacer"></div>
+      <button class="btn" onclick="goNext('r5-2')">下一步：估算夹逼 →</button>
+    </div>
+  </div>
+
+  <div class="step" data-step="r5-3" id="step-r5-3">
+    <h3><span class="step-tag">第 16/23 步</span>B卷2-1：估算夹逼——√2 到底在哪两个整数之间？</h3>
+    <p><b>原题</b>：m、n 是两个连续整数，且 <span class="math">m &lt; −√2 &lt; n</span>，求 m + n。</p>
+    <div class="think-box">🧠 <b>三步走</b>：<br>
+    ① 先算正的：1² = 1 &lt; 2 &lt; 4 = 2² → 1 &lt; √2 &lt; 2，更精确 √2 ≈ 1.414<br>
+    ② 加负号翻方向：−2 &lt; −√2 &lt; −1（注意不等号方向会翻转！）<br>
+    ③ 所以 m = −2，n = −1 → m + n = <b>−3</b></div>
+    <div class="warn-box">⚠️ <b>你答 4 的原因</b>：多半是忘了负号会让区间翻转（−√2 不是夹在 1 和 2 之间，是夹在 −2 和 −1 之间）。<b>负数的估算，先正后负、方向翻转</b>，八个子字记住。</div>
+    <div class="nav-row">
+      <button class="btn-ghost" onclick="goToStep('r5-2')">← 上一步</button>
+      <div class="nav-spacer"></div>
+      <button class="btn btn-next" onclick="goNext('r5-3')">下一步：母套路④ 规律与新定义 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Card r6: 母套路④ 规律与新定义 ============ -->
+<div class="card" id="card-r6">
+  <div class="card-title">🔥 母套路④ 找规律 + 新定义（21(1)(2) + B卷2-2/6）</div>
+
+  <div class="step" data-step="r6-1" id="step-r6-1">
+    <h3><span class="step-tag">第 17/23 步</span>21(1)：观察规律——从具体数字里"嗅"出公式</h3>
+    <p><b>观察这串等式</b>（式子以你练习册为准，规律同型）：</p>
+    <div class="math-block">
+    √(4 + 4/15) = 4√(4/15)<br>
+    √(5 + 5/24) = 5√(5/24)<br>
+    √(6 + 6/35) = 6√(6/35)
+    </div>
+    <div class="think-box">🧠 <b>苏格拉底观察任务</b>：左边被开方数是「n + n/□」，右边是「n√(n/□)」。这个 □ 和 n 是什么关系？<br>
+    15 = 4²−1，24 = 5²−1，35 = 6²−1 → □ = <b>n²−1</b>！</div>
+    <div class="nav-row">
+      <button class="btn-ghost" onclick="goToStep('r5-3')">← 上一步</button>
+      <div class="nav-spacer"></div>
+      <button class="btn" onclick="goNext('r6-1')">下一步：验证一般式 →</button>
+    </div>
+  </div>
+
+  <div class="step" data-step="r6-2" id="step-r6-2">
+    <h3><span class="step-tag">第 18/23 步</span>21(2)：写出并用计算验证一般式</h3>
+    <p><b>猜想</b>：<span class="math">√(n + n/(n²−1)) = n√(n/(n²−1))</span>（n ≥ 2 的整数）。</p>
+    <p><b>验证</b>（找规律题必须验证，这是拿分步骤）：</p>
+    <div class="math-block">
+    右边平方 = n² · n/(n²−1) = n³/(n²−1)<br>
+    左边平方 = n + n/(n²−1) = [n(n²−1) + n]/(n²−1) = (n³ − n + n)/(n²−1) = n³/(n²−1)<br>
+    两边平方相等，且都是非负数 → <b>等式成立</b> ✓
+    </div>
+    <div class="tip-box">📌 <b>找规律题的通用三步</b>：①列具体值找分母与 n 的关系 ②写一般式 ③平方验证。<b>不验证会被扣过程分</b>。</div>
+    <div class="nav-row">
+      <button class="btn-ghost" onclick="goToStep('r6-1')">← 上一步</button>
+      <div class="nav-spacer"></div>
+      <button class="btn" onclick="goNext('r6-2')">下一步：B卷2-2 对称式 →</button>
+    </div>
+  </div>
+
+  <div class="step" data-step="r6-3" id="step-r6-3">
+    <h3><span class="step-tag">第 19/23 步</span>B卷2-2：共轭根式——先算 a+b 和 ab，再拼对称式</h3>
+    <p><b>题型特征</b>：给 <span class="math">a = √3−√2, b = √3+√2</span> 这种"一减一加"的共轭对，求 <span class="math">a²+b²</span>（或 a³b+ab³ 等）。</p>
+    <div class="math-block">
+    <b>万能两步</b>：<br>
+    ① a + b = 2√3　　ab = (√3)² − (√2)² = 3 − 2 = 1<br>
+    ② a² + b² = (a+b)² − 2ab = 12 − 2 = 10
+    </div>
+    <div class="warn-box">⚠️ <b>千万不要</b>把 a、b 各自平方再相加——√3−√2 的平方会带 √6 交叉项，算又慢又容易错。<b>对称式 = 先算和与积</b>，这是代数式求值的通用铁律（22(4) 里的 x²+y² 也是这么拆的！）。</div>
+    <p class="fnote">（你练习册里的具体数字可能不同，方法完全一样：先 a+b，再 ab，最后代对称式。）</p>
+    <div class="nav-row">
+      <button class="btn-ghost" onclick="goToStep('r6-2')">← 上一步</button>
+      <div class="nav-spacer"></div>
+      <button class="btn" onclick="goNext('r6-3')">下一步：新定义翻译 →</button>
+    </div>
+  </div>
+
+  <div class="step" data-step="r6-4" id="step-r6-4">
+    <h3><span class="step-tag">第 20/23 步</span>B卷2-6：新定义题 = 把定义翻译成方程</h3>
+    <p><b>原题</b>：规定：若一个非零实数的算术平方根等于它的立方根，则称这个数为"最美实数"。求最美实数的值。</p>
+    <div class="math-block">
+    <b>翻译</b>：设这个数为 a，"算术平方根 = 立方根" 即<br>
+    √a = ∛a<br><br>
+    设 x = √a = ∛a → 则 a = x² 且 a = x³<br>
+    → x² = x³ → x²(x − 1) = 0<br>
+    → x = 1（x=0 时 a=0，但要求非零，舍）<br>
+    → <b>a = 1</b>
+    </div>
+    <div class="tip-box">📌 <b>新定义题三板斧</b>：①把定义逐字翻译成等式 ②解方程 ③检查定义里的附加条件（本题的"非零"就是用来舍根的！）。</div>
+    <div class="nav-row">
+      <button class="btn-ghost" onclick="goToStep('r6-3')">← 上一步</button>
+      <div class="nav-spacer"></div>
+      <button class="btn btn-next" onclick="goNext('r6-4')">下一步：防错总结 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Card f: final 防错清单 ============ -->
+<div class="card" id="card-f">
+  <div class="card-title">🏆 最终总结 · 防错清单</div>
+
+  <div class="step" data-step="f-1" id="step-f-1">
+    <h3><span class="step-tag">第 21/23 步</span>复盘：这一页为什么错了这么多？</h3>
+    <div class="warn-box">⚠️ <b>不是"题目太难"，是三个母套路没形成条件反射：</b><br><br>
+    <b>漏洞① 非负性之和为零</b>（选择4、填空15、16）——看到「根号+平方+绝对值 相加=0」没有立刻弹"三项归零"；进阶版（填空16）还要求会<b>配方造非负项</b>。<br><br>
+    <b>漏洞② √(a²)=|a| 的符号意识</b>（选择7、22(4)）——把开方当"去掉根号"，默认字母是正的。这是全章失分第一大户。<br><br>
+    <b>漏洞③ 概念靠感觉不靠反例</b>（选择6、8、B卷2-1）——无理数、最简二次根式的判定没有逐条对照+举反例，估算负数忘了区间翻转。</div>
+    <div class="nav-row">
+      <button class="btn-ghost" onclick="goToStep('r6-4')">← 上一步</button>
+      <div class="nav-spacer"></div>
+      <button class="btn" onclick="goNext('f-1')">下一步：考场防错三问 →</button>
+    </div>
+  </div>
+
+  <div class="step" data-step="f-2" id="step-f-2">
+    <h3><span class="step-tag">第 22/23 步</span>考场防错三问（写在错题本第一页）</h3>
+    <div class="success-box">
+    <b>第一问：看到「非负项相加 = 0」了吗？</b><br>
+    → 立刻写三个小等式，每项归零；没有现成非负项就<b>先配方造一个</b>。<br><br>
+    <b>第二问：今天开方了吗？</b><br>
+    → √(a²)=|a|，没说 a≥0 就写绝对值；√(y/x) 先判断 x、y 符号再化简。<br><br>
+    <b>第三问：这是概念判断题吗？</b><br>
+    → 逐项举反例，不用感觉投票；负数估算记住"区间翻转"。
+    </div>
+    <div class="tip-box">📌 <b>以后怎么避免再错</b>：每做完一页实数题，用这三问自查一遍；连续三章不出这三类错，才算真正补上漏洞。</div>
+    <div class="nav-row">
+      <button class="btn-ghost" onclick="goToStep('f-1')">← 上一步</button>
+      <div class="nav-spacer"></div>
+      <button class="btn" onclick="goNext('f-2')">下一步：完成 →</button>
+    </div>
+  </div>
+
+  <div class="step" data-step="f-3" id="step-f-3">
+    <h3><span class="step-tag">第 23/23 步</span>🎉 全部完成！</h3>
+    <div class="success-box">
+    <b>🎯 本页错题全部打通：</b><br>
+    ✅ 选择4 / 填空15 → 母套路① 非负性三项归零<br>
+    ✅ 填空16 → 配方造非负项（进阶版）<br>
+    ✅ 选择7 / 22(4) → 母套路② √(a²)=|a| + 符号处理<br>
+    ✅ 选择6 / 选择8 / B卷2-1 → 母套路③ 概念反例 + 估算夹逼<br>
+    ✅ 21(1)(2) / B卷2-2 / B卷2-6 → 母套路④ 找规律验证 + 对称式 + 新定义翻译<br>
+    ✅ 考场防错三问已入错题本
+    </div>
+    <p style="margin-top: 20px; font-size: 17px; color: #4c1d95; text-align: center;">📐 <b>下一步：把 22(1)(2) 两道纯运算题限时重做一遍，巩固分母有理化与合并同类二次根式。</b></p>
+    <div class="nav-row">
+      <button class="btn-ghost" onclick="goToStep('f-2')">← 上一步</button>
+      <div class="nav-spacer"></div>
+      <button class="btn" onclick="goToStep('r1-1')">🔁 重新开始</button>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+const STEPS = {
+  'r1-1': { card: 'r1', next: 'r1-2', label: '母套路①·读题选择4' },
+  'r1-2': { card: 'r1', next: 'r1-3', label: '母套路①·三板斧' },
+  'r1-3': { card: 'r1', next: 'r1-4', label: '母套路①·解选择4' },
+  'r1-4': { card: 'r1', next: 'r2-1', label: '母套路①·解填空15' },
+  'r2-1': { card: 'r2', next: 'r2-2', label: '填空16·读题' },
+  'r2-2': { card: 'r2', next: 'r2-3', label: '填空16·配方' },
+  'r2-3': { card: 'r2', next: 'r3-1', label: '填空16·归零求值' },
+  'r3-1': { card: 'r3', next: 'r3-2', label: '母套路②·实验' },
+  'r3-2': { card: 'r3', next: 'r3-3', label: '母套路②·结论' },
+  'r3-3': { card: 'r3', next: 'r4-1', label: '母套路②·选择7收尾' },
+  'r4-1': { card: 'r4', next: 'r4-2', label: '22(4)·符号判断' },
+  'r4-2': { card: 'r4', next: 'r4-3', label: '22(4)·关键化简' },
+  'r4-3': { card: 'r4', next: 'r5-1', label: '22(4)·求值' },
+  'r5-1': { card: 'r5', next: 'r5-2', label: '母套路③·选择6' },
+  'r5-2': { card: 'r5', next: 'r5-3', label: '母套路③·选择8' },
+  'r5-3': { card: 'r5', next: 'r6-1', label: '母套路③·B卷2-1' },
+  'r6-1': { card: 'r6', next: 'r6-2', label: '母套路④·21(1)观察' },
+  'r6-2': { card: 'r6', next: 'r6-3', label: '母套路④·21(2)验证' },
+  'r6-3': { card: 'r6', next: 'r6-4', label: '母套路④·B卷2-2' },
+  'r6-4': { card: 'r6', next: 'f-1', label: '母套路④·B卷2-6' },
+  'f-1':  { card: 'f',  next: 'f-2', label: '总结·错因复盘' },
+  'f-2':  { card: 'f',  next: 'f-3', label: '总结·防错三问' },
+  'f-3':  { card: 'f',  next: null,  label: '全部完成' },
+};
+const TOTAL_STEPS = 23;
+let currentStep = 'r1-1';
+
+function updateProgress() {
+  const keys = Object.keys(STEPS);
+  const idx = keys.indexOf(currentStep);
+  const pct = ((idx + 1) / TOTAL_STEPS * 100).toFixed(0);
+  const bar = document.getElementById('progBar');
+  if (bar) bar.style.width = pct + '%';
+  const lab = (STEPS[currentStep] && STEPS[currentStep].label) || '准备开始';
+  const txt = document.getElementById('progText');
+  if (txt) txt.textContent = '进度 ' + (idx + 1) + '/' + TOTAL_STEPS + ' · 当前：' + lab;
+}
+
+function showStep(stepKey) {
+  document.querySelectorAll('.step').forEach(function(el){ el.classList.remove('active'); });
+  const targetStep = document.getElementById('step-' + stepKey);
+  if (!targetStep) { console.error('找不到 step:', stepKey); return; }
+  targetStep.classList.add('active');
+  const info = STEPS[stepKey];
+  if (info && info.card) {
+    document.querySelectorAll('.card').forEach(function(c){ c.style.display = 'none'; });
+    const card = document.getElementById('card-' + info.card);
+    if (card) card.style.display = 'block';
+  }
+  currentStep = stepKey;
+  updateProgress();
+  setTimeout(function(){
+    try {
+      if (targetStep.scrollIntoView) targetStep.scrollIntoView({behavior: 'smooth', block: 'start'});
+      else window.scrollTo(0, targetStep.offsetTop - 100);
+    } catch (e) { window.scrollTo(0, 0); }
+  }, 50);
+}
+
+function goNext(currentKey) {
+  try {
+    const info = STEPS[currentKey];
+    if (info && info.next) showStep(info.next);
+  } catch (e) {
+    console.error('goNext 出错:', e);
+    alert('跳转失败，请刷新页面');
+  }
+}
+
+function goToStep(stepKey) {
+  if (STEPS[stepKey]) showStep(stepKey);
+}
+
+function goToCard(cardKey) {
+  const first = Object.keys(STEPS).find(function(k){ return STEPS[k].card === cardKey; });
+  if (first) showStep(first);
+}
+
+function checkQuiz(quizKey, btn) {
+  try {
+    const wrap = btn.closest('.choice');
+    if (!wrap) return;
+    const isCorrect = btn.getAttribute('data-correct') === 'true';
+    wrap.querySelectorAll('.choice-btn').forEach(function(b){
+      b.classList.remove('correct', 'wrong');
+      if (b.getAttribute('data-correct') === 'true') b.classList.add('correct');
+    });
+    if (!isCorrect) btn.classList.add('wrong');
+    const fb = document.getElementById('fb-' + quizKey);
+    if (fb) {
+      fb.classList.add('show');
+      fb.className = 'feedback-area show ' + (isCorrect ? 'ok' : 'no');
+      fb.innerHTML = isCorrect
+        ? '✅ <b>对！</b>就是这种敏感度——继续往下走。'
+        : '❌ <b>再想想。</b>绿色的是正确选项，看看下面的解析再继续。';
+    }
+  } catch (e) { console.error(e); }
+}
+
+// 绑定选择题点击
+document.querySelectorAll('.choice').forEach(function(wrap){
+  wrap.querySelectorAll('.choice-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      const stepEl = wrap.closest('.step');
+      const key = stepEl ? stepEl.id.replace('step-', '') : '';
+      checkQuiz(key, btn);
+    });
+  });
+});
+
+// 初始化
+showStep('r1-1');
+</script>
+
+</body>
+</html>
