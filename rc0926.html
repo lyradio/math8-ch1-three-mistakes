@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第二章 实数 · B卷错题特训课</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, "Microsoft YaHei", sans-serif; background: linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%); min-height: 100vh; padding: 24px; color: #1f2937; }
+.container { max-width: 1080px; margin: 0 auto; }
+header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 32px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.15); margin-bottom: 24px; }
+header h1 { font-size: 30px; margin-bottom: 12px; }
+header .sub { font-size: 17px; opacity: 0.95; margin-bottom: 14px; }
+header .meta { font-size: 15px; opacity: 0.85; }
+.progress { margin-top: 16px; background: rgba(255,255,255,.25); height: 14px; border-radius: 7px; overflow: hidden; }
+.progress-bar { height: 100%; background: linear-gradient(90deg, #fbbf24, #f59e0b); width: 0%; transition: width 0.4s; border-radius: 7px; }
+.progress-text { font-size: 14px; margin-top: 8px; opacity: 0.95; }
+.card { background: white; border-radius: 16px; padding: 32px; margin-bottom: 20px; box-shadow: 0 4px 16px rgba(0,0,0,.08); display: none; }
+.card-title { font-size: 22px; color: #4c1d95; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 2px solid #e0c3fc; font-weight: 700; }
+.step { display: none; animation: fadeIn 0.5s; }
+.step.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.step-tag { display: inline-block; background: linear-gradient(135deg, #f59e0b, #fbbf24); color: white; padding: 4px 14px; border-radius: 12px; font-size: 14px; font-weight: 700; margin-right: 12px; }
+.step h3 { font-size: 21px; margin-bottom: 14px; color: #1f2937; }
+.step p { font-size: 17px; line-height: 1.9; margin-bottom: 12px; }
+.step .math { font-family: "Cambria Math", serif; font-style: italic; color: #1e40af; font-weight: 600; }
+.math-block { background: #f0f4ff; border-left: 4px solid #6366f1; padding: 14px 18px; margin: 14px 0; border-radius: 6px; font-size: 17px; line-height: 2; color: #1e3a8a; }
+.think-box { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 14px 18px; margin: 14px 0; border-radius: 6px; font-size: 16px; line-height: 1.8; }
+.warn-box { background: #fee2e2; border-left: 4px solid #ef4444; padding: 14px 18px; margin: 14px 0; border-radius: 6px; font-size: 16px; line-height: 1.8; }
+.tip-box { background: #d1fae5; border-left: 4px solid #10b981; padding: 14px 18px; margin: 14px 0; border-radius: 6px; font-size: 16px; line-height: 1.8; }
+.success-box { background: linear-gradient(135deg, #d1fae5, #a7f3d0); border-left: 4px solid #059669; padding: 16px 20px; margin: 14px 0; border-radius: 8px; font-size: 17px; line-height: 1.8; font-weight: 500; }
+.choice { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; }
+.choice-btn { background: #f3f4f6; border: 2px solid #d1d5db; padding: 16px 20px; border-radius: 10px; font-size: 17px; cursor: pointer; transition: all 0.2s; text-align: left; line-height: 1.7; }
+.choice-btn:hover { background: #e0e7ff; border-color: #6366f1; }
+.choice-btn.correct { background: #d1fae5; border-color: #10b981; }
+.choice-btn.wrong { background: #fee2e2; border-color: #ef4444; }
+.feedback-area { margin-top: 16px; padding: 14px 18px; border-radius: 8px; font-size: 16px; line-height: 1.8; display: none; }
+.feedback-area.show { display: block; animation: fadeIn 0.4s; }
+.feedback-area.ok { background: #d1fae5; color: #065f46; border-left: 4px solid #10b981; }
+.feedback-area.no { background: #fee2e2; color: #991b1b; border-left: 4px solid #ef4444; }
+.nav-row { display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding-top: 20px; border-top: 1px solid #e5e7eb; }
+.nav-spacer { flex: 1; }
+.btn { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; border: none; padding: 14px 28px; border-radius: 10px; font-size: 17px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+.btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(99,102,241,.4); }
+.btn:disabled { background: #9ca3af; cursor: not-allowed; opacity: 0.5; }
+.btn-ghost { background: white; color: #6366f1; border: 2px solid #6366f1; padding: 12px 24px; border-radius: 10px; font-size: 16px; cursor: pointer; font-weight: 600; }
+.btn-ghost:hover { background: #e0e7ff; }
+.btn-next { background: linear-gradient(135deg, #10b981, #059669); }
+.fnote { font-size: 14px; color: #9ca3af; font-style: italic; }
+mark { background: #fef08a; padding: 2px 4px; border-radius: 3px; }
+</style>
+</head><body>
+<div class="container">
+
+<header>
+  <h1>🧮 第二章 实数 · 根式化简三连特训课</h1>
+  <div class="sub">第6题 大根号套分式 · 第7题 ab=7 求值 · 第8题 整体代入 —— 一条母套路全部打通</div>
+  <div class="meta">⏱ 约 35 分钟 · 32 步 · 做完就懂、懂了不再错</div>
+  <div class="progress"><div class="progress-bar" id="progBar"></div></div>
+  <div class="progress-text" id="progText">进度 0/32 · 当前：准备开始</div>
+</header>
+
+  <div class="card" id="card-q0">
+  <div class="card-title">🎯 开场 · 这三道题其实是同一道题</div>
+  <div class="step" data-step="q0-1" id="step-q0-1">
+    <h3><span class="step-tag">第 1/32 步</span>先看全局：三道题卡在同一个动作上</h3>
+
+    <div class="think-box">🧠 <b>先想一个问题</b>：第6题是大根号套分式，第7题是 <span class="math">ab=7</span> 求值，第8题是给一个条件求另一个根式。表面完全不同，但它们卡住你的地方，是不是<b>都在「根号内外搬家」</b>这一步？</div>
+    <div class="math-block">第6题：<span class="math">(a−2)</span> 要<b>从根号里搬出来</b> → √((a−2)²) 到底是 a−2 还是 2−a？<br>
+    第7题：<span class="math">a、b</span> 要<b>从根号外搬进去</b> → a 是正还是负？<br>
+    第8题：根号里的 <span class="math">x²+3x+1</span> 要<b>提一个 x 出来</b> → 凑成 x+1/x 的整体</div>
+    <p>这三道题是<b>同一道母题</b>的三个变体。今天把它一次打通。</p>
+    <div class="tip-box">📌 <b>今天唯一的口诀</b>：<b>凡是「根号内外搬家」，先问符号，再动手。</b></div>
+    
+<div class="nav-row"><button class="btn-ghost" disabled>← 上一步</button><div class="nav-spacer"></div><button class="btn" onclick="goNext('q0-1')">先做个诊断小测 →</button></div>
+  </div>
+  <div class="step" data-step="q0-2" id="step-q0-2">
+    <h3><span class="step-tag">第 2/32 步</span>诊断小测：这道题你会不会</h3>
+
+    <p>先别看题，回答一个最基础的问题——它就是今天全部内容的地基：</p>
+    <div class="math-block">√(a²) 等于什么？</div>
+    <div class="choice" data-quiz="q0-2">
+<div class="choice-btn" data-correct="false">A. a</div>
+<div class="choice-btn" data-correct="true">B. |a|（a 的绝对值）</div>
+<div class="choice-btn" data-correct="false">C. ±a</div>
+<div class="choice-btn" data-correct="false">D. a²</div>
+</div>
+<div class="feedback-area" id="fb-q0-2"></div>
+    <div class="warn-box">⚠️ <b>记住这条</b>：√(a²) = |a|，<b>不是 a</b>。a 是正数时等于 a，a 是负数时等于 −a。<br>
+    今天三道题的每一个坑，都是从这一条长出来的。</div>
+    
+<div class="nav-row"><button class="btn-ghost" onclick="goToStep('q0-1')">← 上一步</button><div class="nav-spacer"></div><button class="btn" onclick="goNext('q0-2')">进入第6题 →</button></div>
+  </div>
+</div>
+
+  <div class="card" id="card-q1">
+  <div class="card-title">🔥 第6题 · 大根号套分式（隐藏的取值范围）</div>
+  <div class="step" data-step="q1-1" id="step-q1-1">
+    <h3><span class="step-tag">第 3/32 步</span>读题：先把题面看清</h3>
+<img src="data:image/jpeg;base64,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" style="width:100%;max-width:620px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;">
+    <div class="math-block">计算：<span class="math">√[(a²−4a+4)/(a²−4a+3)] · √(3−a)/(a−2) + √(1−a)</span></div>
+    <div class="think-box">🧠 <b>苏格拉底第一问</b>：看到这一串，你的手是不是马上想开始「分解因式、约分」？<br>
+    <b>先停一下。</b>在动笔之前，有一步必须做在前面——否则后面每一步都可能符号错。</div>
+    <div class="tip-box">📌 这一步是：<b>先把 a 的取值范围定下来</b>（题目没给，但它藏在每个根号和每个分母里）。</div>
+    
+<div class="nav-row"><button class="btn-ghost" onclick="goToStep('q0-2')">← 上一步</button><div class="nav-spacer"></div><button class="btn" onclick="goNext('q1-1')">下一步：找隐藏条件 →</button></div>
+  </div>
+  <div class="step" data-step="q1-2" id="step-q1-2">
+    <h3><span class="step-tag">第 4/32 步</span>第一步永远是找「隐藏条件」</h3>
+
+    <p>逐个点名式子里每一个根号和每一个分母：</p>
+    <div class="math-block">① √(1−a) 有意义 → 1−a ≥ 0 → <b>a ≤ 1</b><br>
+    ② √(3−a) 有意义 → 3−a ≥ 0 → a ≤ 3（已被①包含）<br>
+    ③ 分母 a²−4a+3 = (a−1)(a−3) ≠ 0 → <b>a ≠ 1 且 a ≠ 3</b><br>
+    ④ 分母 a−2 ≠ 0 → a ≠ 2</div>
+    <p>把①和③合起来：a ≤ 1 且 a ≠ 1 → <b>a &lt; 1</b>。</p>
+    <p>现在测一下你找全没有：</p>
+    <div class="choice" data-quiz="q1-2">
+<div class="choice-btn" data-correct="false">A. a ≤ 1</div>
+<div class="choice-btn" data-correct="true">B. a &lt; 1</div>
+<div class="choice-btn" data-correct="false">C. a ≤ 3</div>
+<div class="choice-btn" data-correct="false">D. a &lt; 2</div>
+</div>
+<div class="feedback-area" id="fb-q1-2"></div>
+    <div class="warn-box">⚠️ <b>A 是最大的陷阱</b>：漏掉「分母 ≠ 0」就只能得到 a ≤ 1。但 a=1 时 a²−4a+3 = 0，整个式子没有意义，必须挖掉。<b>答案 a &lt; 1。</b></div>
+    
+<div class="nav-row"><button class="btn-ghost" onclick="goToStep('q1-1')">← 上一步</button><div class="nav-spacer"></div><button class="btn" onclick="goNext('q1-2')">下一步：拆因式 →</button></div>
+  </div>
+  <div class="step" data-step="q1-3" id="step-q1-3">
+    <h3><span class="step-tag">第 5/32 步</span>拆因式：两个二次式都要拆</h3>
+
+    <div class="math-block">a² − 4a + 4 = <b>(a−2)²</b><br>
+    a² − 4a + 3 = <b>(a−1)(a−3)</b></div>
+    <div class="warn-box">⚠️ <b>易错点一</b>：因为 a &lt; 1，所以 a−1 &lt; 0、a−3 &lt; 0，两个<b>都是负数</b>。<br>
+    根号里不能留负数，所以要改写成两个<b>正数</b>相乘：<br>
+    (a−1)(a−3) = [−(1−a)]·[−(3−a)] = <b>(1−a)(3−a)</b><br>
+    于是 √(a²−4a+3) = √[(1−a)(3−a)] = <b>√(1−a) · √(3−a)</b>。</div>
+    <div class="tip-box">📌 <b>口诀</b>：二次根式里碰到两个负因式，先各自<b>提个负号变成正</b>，再拆根号。</div>
+    
+<div class="nav-row"><button class="btn-ghost" onclick="goToStep('q1-2')">← 上一步</button><div class="nav-spacer"></div><button class="btn" onclick="goNext('q1-3')">下一步：今天最关键的一跳 →</button></div>
+  </div>
+  <div class="step" data-step="q1-4" id="step-q1-4">
+    <h3><span class="step-tag">第 6/32 步</span>关键一跳：√((a−2)²) 到底等于什么</h3>
+
+    <p>第一项的分子是 √(a²−4a+4) = √((a−2)²)。按开场那条 √(a²)=|a|：</p>
+    <div class="choice" data-quiz="q1-4">
+<div class="choice-btn" data-correct="false">A. a − 2</div>
+<div class="choice-btn" data-correct="false">B. 2 − a</div>
+<div class="choice-btn" data-correct="true">C. |a−2|，再由 a &lt; 1 得 2 − a</div>
+<div class="choice-btn" data-correct="false">D. 条件不够，判断不了</div>
+</div>
+<div class="feedback-area" id="fb-q1-4"></div>
+    <div class="math-block">√((a−2)²) = |a−2|<br>
+    因为 a &lt; 1 &lt; 2，所以 a−2 &lt; 0 → |a−2| = <b>2 − a</b></div>
+    <div class="warn-box">⚠️ <b>这道题 90% 的错误出在这里</b>：直接写 √((a−2)²) = a−2。<br>
+    如果没有前面「a &lt; 1」这个范围，你根本没法去绝对值——<b>这就是为什么第一步必须先定范围</b>。</div>
+    
+<div class="nav-row"><button class="btn-ghost" onclick="goToStep('q1-3')">← 上一步</button><div class="nav-spacer"></div><button class="btn" onclick="goNext('q1-4')">下一步：第一项完工 →</button></div>
+  </div>
+  <div class="step" data-step="q1-5" id="step-q1-5">
+    <h3><span class="step-tag">第 7/32 步</span>第一项化简完成</h3>
+
+    <div class="math-block">第一项 = √(a²−4a+4) / √(a²−4a+3)<br>
+    = (2−a) / [√(1−a) · √(3−a)]</div>
+    <p>分子是 2−a（正数），分母是两个正根号相乘。第一项搞定，放一边。</p>
+    <div class="tip-box">📌 <b>先别急着跟第二项相乘</b>。盯住第二项看一眼——它身上有一个<b>看不见的负号</b>。</div>
+    
+<div class="nav-row"><button class="btn-ghost" onclick="goToStep('q1-4')">← 上一步</button><div class="nav-spacer"></div><button class="btn" onclick="goNext('q1-5')">下一步：第二项的隐藏负号 →</button></div>
+  </div>
+  <div class="step" data-step="q1-6" id="step-q1-6">
+    <h3><span class="step-tag">第 8/32 步</span>第二项的隐藏负号：分母是负的！</h3>
+
+    <div class="math-block">第二项 = √(3−a) / (a−2)</div>
+    <div class="warn-box">⚠️ <b>易错点二</b>：a &lt; 1，所以 a−2 &lt; 0 —— <b>分母是负数</b>！<br>
+    很多人直接把它当正数去约分，结果整道题的符号就反了。<br>
+    正确写法：√(3−a)/(a−2) = <b>− √(3−a)/(2−a)</b></div>
+    <div class="think-box">🧠 <b>苏格拉底第二问</b>：为什么这里不能写成 √[(3−a)/(a−2)]？<br>
+    因为 a &lt; 1 时 (3−a) &gt; 0、(a−2) &lt; 0，<b>比值是负数</b>，根号里没有意义。所以根号只罩住 3−a，不罩分母。</div>
+    
+<div class="nav-row"><button class="btn-ghost" onclick="goToStep('q1-5')">← 上一步</button><div class="nav-spacer"></div><button class="btn" onclick="goNext('q1-6')">下一步：两项相乘 →</button></div>
+  </div>
+  <div class="step" data-step="q1-7" id="step-q1-7">
+    <h3><span class="step-tag">第 9/32 步</span>相乘：根号全部消掉，只剩一个负号</h3>
+
+    <div class="math-block">第一项 × 第二项<br>
+    = (2−a) / [√(1−a)·√(3−a)] × [ − √(3−a)/(2−a) ]<br>
+    = − (2−a)·√(3−a) / [ (2−a)·√(1−a)·√(3−a) ]<br>
+    = <b>− 1/√(1−a)</b></div>
+    <p>(2−a) 约掉，√(3−a) 约掉，只剩分母的 √(1−a) 和那个负号。</p>
+    <div class="success-box">✅ 一堆根号，两刀就砍没了。<b>剩下的活只有一步</b>：加上最后的 √(1−a)。</div>
+    
+<div class="nav-row"><button class="btn-ghost" onclick="goToStep('q1-6')">← 上一步</button><div class="nav-spacer"></div><button class="btn" onclick="goNext('q1-7')">下一步：收尾 →</button></div>
+  </div>
+  <div class="step" data-step="q1-8" id="step-q1-8">
+    <h3><span class="step-tag">第 10/32 步</span>加上最后一项，得到结果</h3>
+
+    <div class="math-block">原式 = −1/√(1−a) + √(1−a)<br>
+    = [ −1 + (1−a) ] / √(1−a)<br>
+    = −a / √(1−a)<br>
+    = <b>−a√(1−a) / (1−a)</b>（分母有理化）</div>
+    <div class="success-box">✅ <b>第6题答案：−a√(1−a)/(1−a)</b>，也就是 −a/√(1−a)。</div>
+    <div class="tip-box">📌 通分这一步最容易错：把 √(1−a) 看成 √(1−a)/1，通分时分子要乘 <b>(1−a)</b> 而不是 1。</div>
+    
+<div class="nav-row"><button class="btn-ghost" onclick="goToStep('q1-7')">← 上一步</button><div class="nav-spacer"></div><button class="btn" onclick="goNext('q1-8')">下一步：代入验算 →</button></div>
+  </div>
+  <div class="step" data-step="q1-9" id="step-q1-9">
+    <h3><span class="step-tag">第 11/32 步</span>验算：随便挑两个数代进去对一对</h3>
+
+    <p>取 <b>a = 0</b>（满足 a &lt; 1）代入原式：</p>
+    <div class="math-block">√(4/3) · √3/(−2) + √1 = (2/√3)·(−√3/2) + 1 = −1 + 1 = <b>0</b><br>
+    公式：−a/√(1−a) = 0/1 = <b>0</b> ✓</div>
+    <p>再取 <b>a = −3</b>：</p>
+    <div class="math-block">√(25/24) · √6/(−5) + √4 = [5/(2√6)]·(−√6/5) + 2 = −1/2 + 2 = <b>3/2</b><br>
+    公式：−a/√(1−a) = 3/√4 = <b>3/2</b> ✓</div>
+    <div class="success-box">✅ 两个数都对上，说明符号没搞反。</div>
+    
+<div class="nav-row"><button class="btn-ghost" onclick="goToStep('q1-8')">← 上一步</button><div class="nav-spacer"></div><button class="btn" onclick="goNext('q1-9')">下一步：反应测试 →</button></div>
+  </div>
+  <div class="step" data-step="q1-10" id="step-q1-10">
+    <h3><span class="step-tag">第 12/32 步</span>反应测试：下次一眼该看出什么</h3>
+
+    <p>已知 x &lt; 3，下面哪个等式一定成立？</p>
+    <div class="choice" data-quiz="q1-10">
+<div class="choice-btn" data-correct="false">A. √(x²−6x+9) = x − 3</div>
+<div class="choice-btn" data-correct="true">B. √(x²−6x+9) = 3 − x</div>
+<div class="choice-btn" data-correct="false">C. √(x²−6x+9) = ±(x−3)</div>
+<div class="choice-btn" data-correct="false">D. 没法判断</div>
+</div>
+<div class="feedback-area" id="fb-q1-10"></div>
+    <div class="tip-box">📌 <b>信号弹</b>：看到根号里是<b>完全平方</b>（如 (x−3)²），立刻做两件事——<br>
+    ① 写成 |x−3|；② 用题目（或隐含条件）给的 x 范围把绝对值去掉。</div>
+    
+<div class="nav-row"><button class="btn-ghost" onclick="goToStep('q1-9')">← 上一步</button><div class="nav-spacer"></div><button class="btn" onclick="goNext('q1-10')">下一步：第7题 →</button></div>
+  </div>
+</div>
+
+  <div class="card" id="card-q2">
+  <div class="card-title">🔥 第7题 · ab=7 求值（根号外的字母怎么搬进去）</div>
+  <div class="step" data-step="q2-1" id="step-q2-1">
+    <h3><span class="step-tag">第 13/32 步</span>读题</h3>
+<img src="data:image/jpeg;base64,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" style="width:100%;max-width:620px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;">
+    <div class="math-block">已知 <span class="math">ab = 7</span>，求 <span class="math">a√(b/a) + b√(a/b)</span> 的值。</div>
+    <div class="think-box">🧠 <b>苏格拉底第一问</b>：这题看起来比第6题简单得多——但为什么它反而是<b>错得最多</b>的一道？<br>
+    因为它有一个<b>看起来天经地义、其实是错的</b>动作。</div>
+    
+<div class="nav-row"><button class="btn-ghost" onclick="goToStep('q1-10')">← 上一步</button><div class="nav-spacer"></div><button class="btn" onclick="goNext('q2-1')">下一步：先看错在哪 →</button></div>
+  </div>
+  <div class="step" data-step="q2-2" id="step-q2-2">
+    <h3><span class="step-tag">第 14/32 步</span>大多数人的第一反应（错在哪）</h3>
+
+    <div class="math-block">常见写法：a√(b/a) = √(a²)·√(b/a) = √(a²·b/a) = √(ab) = √7<br>
+    同理 b√(a/b) = √7，所以答案 = <b>2√7</b></div>
+    <div class="choice" data-quiz="q2-2">
+<div class="choice-btn" data-correct="false">A. 完全正确</div>
+<div class="choice-btn" data-correct="true">B. 错在 a 可能是负数，√(a²)=|a| 不是 a</div>
+<div class="choice-btn" data-correct="false">C. 错在 b/a 可能是负数</div>
+<div class="choice-btn" data-correct="false">D. 错在 ab=7 推不出 √(ab)=√7</div>
+</div>
+<div class="feedback-area" id="fb-q2-2"></div>
+    <div class="warn-box">⚠️ <b>坑就在这里</b>：把外面的 a 搬进根号，a 要先变成 √(a²)，而 <b>√(a²)=|a|，不是 a</b>。<br>
+    如果 a 是负数，搬进去之后前面要<b>多一个负号</b>。</div>
+    
+<div class="nav-row"><button class="btn-ghost" onclick="goToStep('q2-1')">← 上一步</button><div class="nav-spacer"></div><button class="btn" onclick="goNext('q2-2')">下一步：正确写法 →</button></div>
+  </div>
+  <div class="step" data-step="q2-3" id="step-q2-3">
+    <h3><span class="step-tag">第 15/32 步</span>正确写法：搬进根号前先看符号</h3>
+
+    <div class="math-block">若 <b>a &gt; 0</b>：a√(b/a) = √(a²)·√(b/a) = √(a²·b/a) = √(ab) = <b>√7</b><br>
+    若 <b>a &lt; 0</b>：a√(b/a) = −|a|·√(b/a) = −√(a²·b/a) = −√(ab) = <b>−√7</b></div>
+    <p>同理，b√(a/b) 这一项的正负由 <b>b</b> 的符号决定。</p>
+    <div class="tip-box">📌 <b>一句话</b>：<b>外面那个字母是正，搬进去不变号；是负，搬进去要在根号前补一个负号。</b></div>
+    
+<div class="nav-row"><button class="btn-ghost" onclick="goToStep('q2-2')">← 上一步</button><div class="nav-spacer"></div><button class="btn" onclick="goNext('q2-3')">下一步：ab=7 能定出什么 →</button></div>
+  </div>
+  <div class="step" data-step="q2-4" id="step-q2-4">
+    <h3><span class="step-tag">第 16/32 步</span>关键：ab=7 到底告诉了我们什么</h3>
+
+    <p>ab = 7 &gt; 0，说明 a 和 b <b>同号</b>。但——是同正，还是同负？</p>
+    <div class="choice" data-quiz="q2-4">
+<div class="choice-btn" data-correct="false">A. a &gt; 0 且 b &gt; 0</div>
+<div class="choice-btn" data-correct="true">B. a、b 同号（同正或同负）</div>
+<div class="choice-btn" data-correct="false">C. a、b 异号</div>
+<div class="choice-btn" data-correct="false">D. 什么都推不出来</div>
+</div>
+<div class="feedback-area" id="fb-q2-4"></div>
+    <div class="warn-box">⚠️ <b>这就是这题的题眼</b>：ab=7 只保证同号，<b>不保证都是正数</b>。<br>
+    所以必须<b>分两种情况</b>讨论。</div>
+    
+<div class="nav-row"><button class="btn-ghost" onclick="goToStep('q2-3')">← 上一步</button><div class="nav-spacer"></div><button class="btn" onclick="goNext('q2-4')">下一步：情况一 →</button></div>
+  </div>
+  <div class="step" data-step="q2-5" id="step-q2-5">
+    <h3><span class="step-tag">第 17/32 步</span>情况一：a、b 都是正数</h3>
+
+    <div class="math-block">a &gt; 0 → a√(b/a) = +√7<br>
+    b &gt; 0 → b√(a/b) = +√7<br>
+    原式 = √7 + √7 = <b>2√7</b></div>
+    <p>代入一组数检验：a=1，b=7 → 1·√7 + 7·√(1/7) = √7 + √7 = 2√7 ✓</p>
+    
+<div class="nav-row"><button class="btn-ghost" onclick="goToStep('q2-4')">← 上一步</button><div class="nav-spacer"></div><button class="btn" onclick="goNext('q2-5')">下一步：情况二 →</button></div>
+  </div>
+  <div class="step" data-step="q2-6" id="step-q2-6">
+    <h3><span class="step-tag">第 18/32 步</span>情况二：a、b 都是负数</h3>
+
+    <div class="math-block">a &lt; 0 → a√(b/a) = −√7<br>
+    b &lt; 0 → b√(a/b) = −√7<br>
+    原式 = −√7 − √7 = <b>−2√7</b></div>
+    <p>代入一组数检验：a=−1，b=−7 → (−1)·√7 + (−7)·√(1/7) = −√7 − √7 = −2√7 ✓</p>
+    <div class="tip-box">📌 注意 b/a = (−7)/(−1) = 7 &gt; 0，根号照样有意义，所以这种情况<b>是合法的</b>，不能丢。</div>
+    
+<div class="nav-row"><button class="btn-ghost" onclick="goToStep('q2-5')">← 上一步</button><div class="nav-spacer"></div><button class="btn" onclick="goNext('q2-6')">下一步：到底写哪个答案 →</button></div>
+  </div>
+  <div class="step" data-step="q2-7" id="step-q2-7">
+    <h3><span class="step-tag">第 19/32 步</span>考场怎么写才能拿满分</h3>
+
+    <div class="success-box">✅ <b>完整答案：±2√7</b>（a、b 同正取 +2√7，同负取 −2√7）</div>
+    <div class="math-block">标准写法三步：<br>
+    ① 由 ab=7&gt;0 得 a、b 同号；<br>
+    ② 当 a&gt;0、b&gt;0 时，原式 = 2√7；<br>
+    ③ 当 a&lt;0、b&lt;0 时，原式 = −2√7。<br>
+    ∴ 原式的值为 <b>±2√7</b>。</div>
+    <div class="tip-box">📌 如果练习册的答案只印了 <b>2√7</b>，那是它<b>默认了 a、b 是正数</b>。你在卷子上把两种情况都写全，<b>两种答案标准都不会算你错</b>。</div>
+    
+<div class="nav-row"><button class="btn-ghost" onclick="goToStep('q2-6')">← 上一步</button><div class="nav-spacer"></div><button class="btn" onclick="goNext('q2-7')">下一步：反应测试 →</button></div>
+  </div>
+  <div class="step" data-step="q2-8" id="step-q2-8">
+    <h3><span class="step-tag">第 20/32 步</span>反应测试：换个数你还会在吗</h3>
+
+    <p>已知 ab = 5，且<b>没有</b>其他条件，则 a√(b/a) + b√(a/b) 的值是？</p>
+    <div class="choice" data-quiz="q2-8">
+<div class="choice-btn" data-correct="false">A. 2√5</div>
+<div class="choice-btn" data-correct="false">B. −2√5</div>
+<div class="choice-btn" data-correct="true">C. ±2√5</div>
+<div class="choice-btn" data-correct="false">D. 条件不足，求不出</div>
+</div>
+<div class="feedback-area" id="fb-q2-8"></div>
+    <div class="tip-box">📌 <b>信号弹</b>：只要题目给出的是 <b>ab = 正数</b>（只给乘积、不给单个字母的正负），就要<b>自觉分类讨论</b>。</div>
+    
+<div class="nav-row"><button class="btn-ghost" onclick="goToStep('q2-7')">← 上一步</button><div class="nav-spacer"></div><button class="btn" onclick="goNext('q2-8')">下一步：第8题 →</button></div>
+  </div>
+</div>
+
+  <div class="card" id="card-q3">
+  <div class="card-title">🔥 第8题 · 整体代入（不求出 x 也能算）</div>
+  <div class="step" data-step="q3-1" id="step-q3-1">
+    <h3><span class="step-tag">第 21/32 步</span>读题</h3>
+<img src="data:image/jpeg;base64,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" style="width:100%;max-width:620px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;">
+    <div class="math-block">已知 <span class="math">√x + 1/√x = 2</span>，求 <span class="math">√(x²+3x+1) − √(x²+4x+1)</span> 的值。</div>
+    <div class="think-box">🧠 <b>苏格拉底第一问</b>：题目给的是 √x + 1/√x，要求的是 √(x²+3x+1)。<br>
+    这两个式子长得完全不像，它们之间<b>唯一的桥</b>是什么？</div>
+    
+<div class="nav-row"><button class="btn-ghost" onclick="goToStep('q2-8')">← 上一步</button><div class="nav-spacer"></div><button class="btn" onclick="goNext('q3-1')">下一步：找那座桥 →</button></div>
+  </div>
+  <div class="step" data-step="q3-2" id="step-q3-2">
+    <h3><span class="step-tag">第 22/32 步</span>看到 x²+3x+1，第一反应应该是什么</h3>
+
+    <div class="choice" data-quiz="q3-2">
+<div class="choice-btn" data-correct="false">A. 先解方程把 x 求出来，再代入</div>
+<div class="choice-btn" data-correct="true">B. 从根号里提一个 x 出来，凑成 x·(x + 3 + 1/x)</div>
+<div class="choice-btn" data-correct="false">C. 把 x²+3x+1 配方</div>
+<div class="choice-btn" data-correct="false">D. 两边平方把根号去掉</div>
+</div>
+<div class="feedback-area" id="fb-q3-2"></div>
+    <div class="tip-box">📌 <b>为什么选 B</b>：题目给你的是「x 和 1/x 捆在一起」的条件，那你就把要求的式子<b>也凑成 x 和 1/x 的样子</b>——这叫<b>整体代入</b>。<br>
+    （A 也能做对，但那是「笨办法」；B 是压轴题真正要考的思维。这一课<b>两条路都走一遍</b>。）</div>
+    
+<div class="nav-row"><button class="btn-ghost" onclick="goToStep('q3-1')">← 上一步</button><div class="nav-spacer"></div><button class="btn" onclick="goNext('q3-2')">下一步：提 x →</button></div>
+  </div>
+  <div class="step" data-step="q3-3" id="step-q3-3">
+    <h3><span class="step-tag">第 23/32 步</span>提一个 x 出来：根号里立刻现形</h3>
+
+    <div class="math-block">x² + 3x + 1 = x·(x + 3 + 1/x)<br>
+    ∴ √(x²+3x+1) = √[ x·(x + 3 + 1/x) ] = <b>√x · √(x + 1/x + 3)</b><br>
+    同理 √(x²+4x+1) = <b>√x · √(x + 1/x + 4)</b></div>
+    <div class="warn-box">⚠️ <b>能这样拆的前提</b>：x &gt; 0（有 √x 就说明 x&gt;0），而且 x + 1/x + 3 &gt; 0。两个都满足，放心拆。</div>
+    <div class="tip-box">📌 <b>手法名字</b>：<b>分子分母同除以 x</b>（这里是「根号里同提出 x」）——凡见到 x²+ax+1 这种首尾对称的式子，就把它提出来。</div>
+    
+<div class="nav-row"><button class="btn-ghost" onclick="goToStep('q3-2')">← 上一步</button><div class="nav-spacer"></div><button class="btn" onclick="goNext('q3-3')">下一步：把已知也变成 x+1/x →</button></div>
+  </div>
+  <div class="step" data-step="q3-4" id="step-q3-4">
+    <h3><span class="step-tag">第 24/32 步</span>把已知条件也变成 x + 1/x</h3>
+
+    <div class="math-block">已知：√x + 1/√x = 2<br>
+    两边平方：(√x)² + 2·√x·(1/√x) + (1/√x)² = 4<br>
+    即：x + 2 + 1/x = 4<br>
+    ∴ <b>x + 1/x = 2</b></div>
+    <div class="tip-box">📌 中间那一项 2·√x·(1/√x) = 2，是<b>完全平方公式</b>的固定产物，永远消得掉 x。这就是「√x + 1/√x」和「x + 1/x」之间的固定通道。</div>
+    
+<div class="nav-row"><button class="btn-ghost" onclick="goToStep('q3-3')">← 上一步</button><div class="nav-spacer"></div><button class="btn" onclick="goNext('q3-4')">下一步：代入 →</button></div>
+  </div>
+  <div class="step" data-step="q3-5" id="step-q3-5">
+    <h3><span class="step-tag">第 25/32 步</span>代入：两个根号瞬间变干净</h3>
+
+    <div class="math-block">√(x²+3x+1) = √x · √(2 + 3) = √x · <b>√5</b><br>
+    √(x²+4x+1) = √x · √(2 + 4) = √x · <b>√6</b><br>
+    ∴ 原式 = √x·√5 − √x·√6 = <b>√x · (√5 − √6)</b></div>
+    <div class="think-box">🧠 <b>苏格拉底第二问</b>：还差最后一个未知量 √x。题目只给了 √x + 1/√x = 2，能把 √x 单独揪出来吗？</div>
+    
+<div class="nav-row"><button class="btn-ghost" onclick="goToStep('q3-4')">← 上一步</button><div class="nav-spacer"></div><button class="btn" onclick="goNext('q3-5')">下一步：揪出 √x →</button></div>
+  </div>
+  <div class="step" data-step="q3-6" id="step-q3-6">
+    <h3><span class="step-tag">第 26/32 步</span>揪出 √x：用「平方差」这一招</h3>
+
+    <div class="choice" data-quiz="q3-6">
+<div class="choice-btn" data-correct="true">A. √x = 1</div>
+<div class="choice-btn" data-correct="false">B. √x = 2</div>
+<div class="choice-btn" data-correct="false">C. √x = √2</div>
+<div class="choice-btn" data-correct="false">D. 求不出来</div>
+</div>
+<div class="feedback-area" id="fb-q3-6"></div>
+    <div class="math-block">(√x − 1/√x)² = (√x + 1/√x)² − 4·√x·(1/√x) = 4 − 4 = <b>0</b><br>
+    ∴ √x − 1/√x = 0 → √x = 1/√x → x = 1 → <b>√x = 1</b></div>
+    <div class="tip-box">📌 也可以设 t = √x &gt; 0：t + 1/t = 2 → t² − 2t + 1 = 0 → (t−1)² = 0 → <b>t = 1</b>。</div>
+    
+<div class="nav-row"><button class="btn-ghost" onclick="goToStep('q3-5')">← 上一步</button><div class="nav-spacer"></div><button class="btn" onclick="goNext('q3-6')">下一步：得出结果 →</button></div>
+  </div>
+  <div class="step" data-step="q3-7" id="step-q3-7">
+    <h3><span class="step-tag">第 27/32 步</span>结果 + 用笨办法验一遍</h3>
+
+    <div class="success-box">✅ 原式 = 1 × (√5 − √6) = <b>√5 − √6</b></div>
+    <p><b>笨办法验算</b>（先求 x 再代入）：由上面得 x = 1，直接代原式：</p>
+    <div class="math-block">√(1² + 3·1 + 1) − √(1² + 4·1 + 1) = √5 − √6 ✓</div>
+    <div class="tip-box">📌 两条路得到同一个答案。<b>考场上用哪条？</b>——如果题目给的已知条件比较复杂（比如 √x + 1/√x = 3），解 x 会很麻烦，那时候<b>整体代入</b>就是唯一能走通的路。所以这一招必须练熟。</div>
+    
+<div class="nav-row"><button class="btn-ghost" onclick="goToStep('q3-6')">← 上一步</button><div class="nav-spacer"></div><button class="btn" onclick="goNext('q3-7')">下一步：反应测试 →</button></div>
+  </div>
+  <div class="step" data-step="q3-8" id="step-q3-8">
+    <h3><span class="step-tag">第 28/32 步</span>反应测试：换个数试试整体代入</h3>
+
+    <p>已知 √x + 1/√x = 3，则 x + 1/x 等于多少？</p>
+    <div class="choice" data-quiz="q3-8">
+<div class="choice-btn" data-correct="false">A. 3</div>
+<div class="choice-btn" data-correct="true">B. 7</div>
+<div class="choice-btn" data-correct="false">C. 9</div>
+<div class="choice-btn" data-correct="false">D. 11</div>
+</div>
+<div class="feedback-area" id="fb-q3-8"></div>
+    <div class="math-block">(√x + 1/√x)² = x + 2 + 1/x = 9 → x + 1/x = <b>7</b></div>
+    
+<div class="nav-row"><button class="btn-ghost" onclick="goToStep('q3-7')">← 上一步</button><div class="nav-spacer"></div><button class="btn" onclick="goNext('q3-8')">下一步：总结 →</button></div>
+  </div>
+</div>
+
+  <div class="card" id="card-f">
+  <div class="card-title">🏆 总结 · 三个坑，一条母套路</div>
+  <div class="step" data-step="f-1" id="step-f-1">
+    <h3><span class="step-tag">第 29/32 步</span>错因复盘：你掉的其实是同一个坑</h3>
+
+    <div class="warn-box">⚠️ <b>坑一：不先找取值范围</b>（第6题）<br>
+    没先定出 a &lt; 1，后面 √((a−2)²) 到底去不去绝对值、分母是正还是负，全都判断不了。</div>
+    <div class="warn-box">⚠️ <b>坑二：根号内外搬家忘了符号</b>（第6、7题）<br>
+    √(a²) = |a| 不是 a。搬出来的要加绝对值，搬进去的要先看正负。</div>
+    <div class="warn-box">⚠️ <b>坑三：只会「先求 x 再代入」</b>（第8题）<br>
+    题目给的是整体（x + 1/x），就不会把要求的式子也凑成整体。</div>
+    <div class="tip-box">📌 三个坑其实是一个：<b>动手太快，定性太慢。</b></div>
+    
+<div class="nav-row"><button class="btn-ghost" onclick="goToStep('q3-8')">← 上一步</button><div class="nav-spacer"></div><button class="btn" onclick="goNext('f-1')">下一步：母套路 →</button></div>
+  </div>
+  <div class="step" data-step="f-2" id="step-f-2">
+    <h3><span class="step-tag">第 30/32 步</span>母套路：三步法，通吃这三道题</h3>
+
+    <div class="success-box">✅ <b>第一步 · 定范围</b><br>
+    把所有隐含条件列出来：被开方数 ≥ 0、分母 ≠ 0。<b>写在草稿纸最上面</b>。</div>
+    <div class="success-box">✅ <b>第二步 · 定符号</b><br>
+    凡是出现 √(A²)，先写 |A|，再用第一步的范围去掉绝对值；<br>
+    凡是要把根号外的字母搬进根号，先判断它的正负。</div>
+    <div class="success-box">✅ <b>第三步 · 整体代入</b><br>
+    已知给的是「x + 1/x」这类整体，就把要求的式子也凑成这个整体（提 x / 除以 x），别急着解方程。</div>
+    <div class="tip-box">📌 这三步的顺序<b>不能颠倒</b>：先定范围 → 再定符号 → 最后才动手算。</div>
+    
+<div class="nav-row"><button class="btn-ghost" onclick="goToStep('f-1')">← 上一步</button><div class="nav-spacer"></div><button class="btn" onclick="goNext('f-2')">下一步：防错三问 →</button></div>
+  </div>
+  <div class="step" data-step="f-3" id="step-f-3">
+    <h3><span class="step-tag">第 31/32 步</span>防错三问：写完每道题，问自己三句</h3>
+
+    <div class="math-block">① 我<b>有没有先写取值范围</b>？<br>
+    ② 我<b>搬进／搬出根号</b>的时候，有没有想到 √(a²)=|a| 并看符号？<br>
+    ③ 我能不能<b>不求出字母的值</b>，直接整体代入？</div>
+    <p>三句都答得上来，这道题就不会再错了。</p>
+    <div class="tip-box">📌 <b>下次作业里的行动</b>：拿到任何一道根式题，先在草稿纸上写一行「取值范围：____」，再动笔。坚持两周，这类题就稳了。</div>
+    
+<div class="nav-row"><button class="btn-ghost" onclick="goToStep('f-2')">← 上一步</button><div class="nav-spacer"></div><button class="btn" onclick="goNext('f-3')">下一步：完成 →</button></div>
+  </div>
+  <div class="step" data-step="f-4" id="step-f-4">
+    <h3><span class="step-tag">第 32/32 步</span>🎉 全部完成</h3>
+
+    <div class="success-box">✅ 三道题全部打通：<br>
+    第6题 → −a√(1−a)/(1−a)<br>
+    第7题 → ±2√7<br>
+    第8题 → √5 − √6</div>
+    <div class="tip-box">📌 <b>今天唯一要记住的一句话</b>：<b>根号内外搬家，先问符号再动手。</b></div>
+    <p>建议隔一天再做一遍：盖住答案，只靠「定范围 → 定符号 → 整体代入」三步，看能不能自己走通。</p>
+    <div class="nav-row">
+      <button class="btn-ghost" onclick="goToStep('f-3')">← 上一步</button>
+      <div class="nav-spacer"></div>
+      <button class="btn" onclick="goToStep('q0-1')">🔁 重新开始</button>
+    </div>
+    
+
+  </div>
+</div>
+
+
+
+<script>
+const STEPS = {
+  'q0-1': { card: 'q0', next: 'q0-2', label: '开场·同一道母题' },
+  'q0-2': { card: 'q0', next: 'q1-1', label: '诊断小测' },
+  'q1-1': { card: 'q1', next: 'q1-2', label: '第6题·读题' },
+  'q1-2': { card: 'q1', next: 'q1-3', label: '第6题·找隐藏条件' },
+  'q1-3': { card: 'q1', next: 'q1-4', label: '第6题·拆因式' },
+  'q1-4': { card: 'q1', next: 'q1-5', label: '第6题·去绝对值' },
+  'q1-5': { card: 'q1', next: 'q1-6', label: '第6题·第一项完工' },
+  'q1-6': { card: 'q1', next: 'q1-7', label: '第6题·隐藏负号' },
+  'q1-7': { card: 'q1', next: 'q1-8', label: '第6题·两项相乘' },
+  'q1-8': { card: 'q1', next: 'q1-9', label: '第6题·得出结果' },
+  'q1-9': { card: 'q1', next: 'q1-10', label: '第6题·验算' },
+  'q1-10': { card: 'q1', next: 'q2-1', label: '第6题·测试' },
+  'q2-1': { card: 'q2', next: 'q2-2', label: '第7题·读题' },
+  'q2-2': { card: 'q2', next: 'q2-3', label: '第7题·错在哪' },
+  'q2-3': { card: 'q2', next: 'q2-4', label: '第7题·正确写法' },
+  'q2-4': { card: 'q2', next: 'q2-5', label: '第7题·同号不同正负' },
+  'q2-5': { card: 'q2', next: 'q2-6', label: '第7题·同正' },
+  'q2-6': { card: 'q2', next: 'q2-7', label: '第7题·同负' },
+  'q2-7': { card: 'q2', next: 'q2-8', label: '第7题·考场写法' },
+  'q2-8': { card: 'q2', next: 'q3-1', label: '第7题·测试' },
+  'q3-1': { card: 'q3', next: 'q3-2', label: '第8题·读题' },
+  'q3-2': { card: 'q3', next: 'q3-3', label: '第8题·找桥' },
+  'q3-3': { card: 'q3', next: 'q3-4', label: '第8题·提x' },
+  'q3-4': { card: 'q3', next: 'q3-5', label: '第8题·凑x+1/x' },
+  'q3-5': { card: 'q3', next: 'q3-6', label: '第8题·整体代入' },
+  'q3-6': { card: 'q3', next: 'q3-7', label: '第8题·揪出√x' },
+  'q3-7': { card: 'q3', next: 'q3-8', label: '第8题·得出结果' },
+  'q3-8': { card: 'q3', next: 'f-1', label: '第8题·测试' },
+  'f-1': { card: 'f', next: 'f-2', label: '总结·错因复盘' },
+  'f-2': { card: 'f', next: 'f-3', label: '总结·三步法' },
+  'f-3': { card: 'f', next: 'f-4', label: '总结·防错三问' },
+  'f-4': { card: 'f', next: null, label: '全部完成' },
+};
+const TOTAL_STEPS = 32;
+let currentStep = 'q0-1';
+
+function updateProgress() {
+  const keys = Object.keys(STEPS);
+  const idx = keys.indexOf(currentStep);
+  const pct = ((idx + 1) / TOTAL_STEPS * 100).toFixed(0);
+  const bar = document.getElementById('progBar');
+  if (bar) bar.style.width = pct + '%';
+  const lab = (STEPS[currentStep] && STEPS[currentStep].label) || '准备开始';
+  const txt = document.getElementById('progText');
+  if (txt) txt.textContent = '进度 ' + (idx + 1) + '/' + TOTAL_STEPS + ' · 当前：' + lab;
+}
+
+function showStep(stepKey) {
+  document.querySelectorAll('.step').forEach(function(el){ el.classList.remove('active'); });
+  const targetStep = document.getElementById('step-' + stepKey);
+  if (!targetStep) { console.error('找不到 step:', stepKey); return; }
+  targetStep.classList.add('active');
+  const info = STEPS[stepKey];
+  if (info && info.card) {
+    document.querySelectorAll('.card').forEach(function(c){ c.style.display = 'none'; });
+    const card = document.getElementById('card-' + info.card);
+    if (card) card.style.display = 'block';
+  }
+  currentStep = stepKey;
+  updateProgress();
+  setTimeout(function(){
+    try {
+      if (targetStep.scrollIntoView) targetStep.scrollIntoView({behavior: 'smooth', block: 'start'});
+      else window.scrollTo(0, targetStep.offsetTop - 100);
+    } catch (e) { window.scrollTo(0, 0); }
+  }, 50);
+}
+
+function goNext(currentKey) {
+  try {
+    const info = STEPS[currentKey];
+    if (info && info.next) showStep(info.next);
+  } catch (e) {
+    console.error('goNext 出错:', e);
+    alert('跳转失败，请刷新页面');
+  }
+}
+
+function goToStep(stepKey) {
+  if (STEPS[stepKey]) showStep(stepKey);
+}
+
+function goToCard(cardKey) {
+  const first = Object.keys(STEPS).find(function(k){ return STEPS[k].card === cardKey; });
+  if (first) showStep(first);
+}
+
+function checkQuiz(quizKey, btn) {
+  try {
+    const wrap = btn.closest('.choice');
+    if (!wrap) return;
+    const isCorrect = btn.getAttribute('data-correct') === 'true';
+    wrap.querySelectorAll('.choice-btn').forEach(function(b){
+      b.classList.remove('correct', 'wrong');
+      if (b.getAttribute('data-correct') === 'true') b.classList.add('correct');
+    });
+    if (!isCorrect) btn.classList.add('wrong');
+    const fb = document.getElementById('fb-' + quizKey);
+    if (fb) {
+      fb.className = 'feedback-area show ' + (isCorrect ? 'ok' : 'no');
+      fb.innerHTML = isCorrect
+        ? '✅ <b>对！</b>这条路走通了——继续往下。'
+        : '❌ <b>再想想。</b>绿色的是正确选项，看完解析再继续。';
+    }
+  } catch (e) { console.error(e); }
+}
+
+document.querySelectorAll('.choice').forEach(function(wrap){
+  wrap.querySelectorAll('.choice-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      const stepEl = wrap.closest('.step');
+      const key = stepEl ? stepEl.id.replace('step-', '') : '';
+      checkQuiz(key, btn);
+    });
+  });
+});
+
+showStep('q0-1');
+</script>
+
+</body>
+</html>
